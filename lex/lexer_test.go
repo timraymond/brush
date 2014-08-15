@@ -20,21 +20,52 @@ var lexTests = []lexTest{
 	{"markdown with newlines", "Markdown with \n\n Newlines...", []item{
 		{itemText, "Markdown with \n\n Newlines..."},
 	}},
+	{"markdown with opening braai tag", "The {{", []item{
+		{itemText, "The "},
+		{itemLeftMeta, "{{"},
+	}},
+	{"markdown with {{product.name}} braai tag", "The {{product.name}}", []item{
+		{itemText, "The "},
+		{itemLeftMeta, "{{"},
+		{itemProductName, "product.name"},
+		{itemRightMeta, "}}"},
+	}},
+	{"markdown with multiple {{product.name}} braai tags", "The {{product.name}} is called the {{product.name}}", []item{
+		{itemText, "The "},
+		{itemLeftMeta, "{{"},
+		{itemProductName, "product.name"},
+		{itemRightMeta, "}}"},
+		{itemText, " is called the "},
+		{itemLeftMeta, "{{"},
+		{itemProductName, "product.name"},
+		{itemRightMeta, "}}"},
+	}},
+}
+
+// Lexes the document in the test and returns a slice of items
+func collect(t *lexTest) (items []item) {
+	lexer := NewLexer(t.input)
+	for {
+		item := lexer.NextToken()
+		items = append(items, item)
+		if item.Type == itemEOF {
+			break
+		}
+	}
+	return
 }
 
 func TestLexing(t *testing.T) {
 	for _, test := range lexTests {
-		lexer := NewLexer(test.input)
-		for _, expectedItem := range test.items {
-			item, err := lexer.NextToken()
-			if err != nil {
-				t.Error(err)
+		actualItems := collect(&test)
+
+		for idx, expected := range test.items {
+			actual := actualItems[idx]
+			if expected.Value != actual.Value {
+				t.Errorf("%s\n\tExpected \"%s\" to equal \"%s\"", test.name, actual.Value, expected.Value)
 			}
-			if item.Value != expectedItem.Value {
-				t.Errorf("LexTest: %s, Unexpected Value. Expected \"%s\" to eqaul \"%s\"", test.name, item.Value, expectedItem.Value)
-			}
-			if item.Type != expectedItem.Type {
-				t.Errorf("LexTest: %s, Unexpected Item. Expected \"%s\" to eqaul \"%s\"", test.name, item.Type, expectedItem.Type)
+			if expected.Type != actual.Type {
+				t.Errorf("%s\n\tExpected \"%s\" to equal \"%s\"", test.name, actual.Type, expected.Type)
 			}
 		}
 	}
