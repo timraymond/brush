@@ -40,6 +40,15 @@ var lexTests = []lexTest{
 		{itemProductName, "product.name"},
 		{itemRightMeta, "}}"},
 	}},
+	{"attachment with arguments", "Here's an awesome attachment {{attachments(350661)}}", []item{
+		{itemText, "Here's an awesome attachment "},
+		{itemLeftMeta, "{{"},
+		{itemAttachment, "attachments"},
+		{itemArgumentOpen, "("},
+		{itemIdentifier, "350661"},
+		{itemArgumentClose, ")"},
+		{itemRightMeta, "}}"},
+	}},
 }
 
 // Lexes the document in the test and returns a slice of items

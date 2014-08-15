@@ -20,11 +20,16 @@ const (
 	itemLeftMeta
 	itemRightMeta
 	itemProductName
+	itemAttachment
+	itemArgumentOpen
+	itemArgumentClose
+	itemIdentifier
 	itemEOF
 )
 
 var keywords = map[string]itemType{
 	"product.name": itemProductName,
+	"attachments":  itemAttachment,
 }
 
 // Represents a scanned item. Includes the string value encompassing the item.
@@ -94,6 +99,36 @@ func lexInsideAction(l *lexer) stateFn {
 		if strings.HasPrefix(l.input[l.pos:], "}}") {
 			l.emit(keywords[l.input[l.start:l.pos]])
 			return lexRightMeta
+		} else if string(l.input[l.pos]) == "(" {
+			l.emit(keywords[l.input[l.start:l.pos]])
+			return lexArgumentOpen
+		} else {
+			l.pos += 1
+		}
+	}
+}
+
+func lexArgumentOpen(l *lexer) stateFn {
+	l.pos += 1
+	l.emit(itemArgumentOpen)
+	return lexArgument
+}
+
+func lexArgumentClose(l *lexer) stateFn {
+	l.pos += 1
+	l.emit(itemArgumentClose)
+	return lexRightMeta
+}
+
+func lexArgument(l *lexer) stateFn {
+	for {
+		if l.pos == len(l.input) {
+			l.emit(itemText)
+			return lexEOF
+		}
+		if strings.HasPrefix(l.input[l.pos:], ")") {
+			l.emit(itemIdentifier)
+			return lexArgumentClose
 		} else {
 			l.pos += 1
 		}
