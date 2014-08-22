@@ -90,6 +90,19 @@ var lexTests = []lexTest{
 		{itemSpace, 0, " "},
 		{itemRightMeta, 0, "}}"},
 	}},
+	{"attachment with popup", "Here's an awesome attachment {{ attachments(350661).popup }}", []item{
+		{itemText, 0, "Here's an awesome attachment "},
+		{itemLeftMeta, 0, "{{"},
+		{itemSpace, 0, " "},
+		{itemCommand, 0, "attachments"},
+		{itemArgumentOpen, 0, "("},
+		{itemIdentifier, 0, "350661"},
+		{itemArgumentClose, 0, ")"},
+    {itemDot, 0, "."},
+    {itemCommand, 0, "popup"},
+		{itemSpace, 0, " "},
+		{itemRightMeta, 0, "}}"},
+	}},
 }
 
 // Lexes the document in the test and returns a slice of items
