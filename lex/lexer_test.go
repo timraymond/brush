@@ -78,6 +78,18 @@ var lexTests = []lexTest{
 		{itemCommand, 0, "callout"},
 		{itemRightMeta, 0, "}}"},
 	}},
+	{"brightcove", "Behold, a video: {{ brightcove '1234' }}", []item{
+		{itemText, 0, "Behold, a video: "},
+		{itemLeftMeta, 0, "{{"},
+		{itemSpace, 0, " "},
+		{itemCommand, 0, "brightcove"},
+		{itemSpace, 0, " "},
+		{itemArgumentOpen, 0, "'"},
+		{itemIdentifier, 0, "1234"},
+		{itemArgumentClose, 0, "'"},
+		{itemSpace, 0, " "},
+		{itemRightMeta, 0, "}}"},
+	}},
 }
 
 // Lexes the document in the test and returns a slice of items

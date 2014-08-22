@@ -22,7 +22,7 @@ type itemType int
 type stateFn func(*lexer) stateFn
 
 const letters = "abcdefghijklmnopqrstuvwxyz"
-const hex = "0123456789abcdef"
+const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 const eof = -1
 
@@ -160,7 +160,7 @@ func lexInsideAction(l *lexer) stateFn {
 	case r == '.':
 		l.emit(itemDot)
 		return lexInsideAction
-	case r == '(':
+	case r == '(' || r == '\'':
 		return lexArgumentOpen
 	case r == '/':
 		return lexCloser
@@ -187,7 +187,7 @@ func lexArgumentOpen(l *lexer) stateFn {
 
 func lexArgumentClose(l *lexer) stateFn {
 	r := l.next()
-	if r == ')' {
+	if r == ')' || r == '\'' {
 		l.emit(itemArgumentClose)
 	} else {
 		return l.errorf("Unexpected character in argument: %#U", r)
@@ -196,7 +196,7 @@ func lexArgumentClose(l *lexer) stateFn {
 }
 
 func lexArgument(l *lexer) stateFn {
-	l.acceptRun(hex)
+	l.acceptRun(alphaNum)
 	l.emit(itemIdentifier)
 	return lexArgumentClose
 }
