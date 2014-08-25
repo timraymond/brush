@@ -35,6 +35,8 @@ const (
 	itemSlash
 	itemArgumentOpen
 	itemArgumentClose
+	itemParenthesizedArgument
+	itemQuotedArgument
 	itemIdentifier
 	itemEOF
 	itemSpace
@@ -105,6 +107,10 @@ func (l *lexer) peek() rune {
 	return r
 }
 
+func (l *lexer) ignore() {
+	l.start = l.pos
+}
+
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 	l.items <- item{itemError, l.start, fmt.Sprintf(format, args...)}
 	return nil
@@ -139,11 +145,12 @@ func lexRightMeta(l *lexer) stateFn {
 	return lexText
 }
 
+// Braai ignores all whitespace within braai tags
 func lexSpace(l *lexer) stateFn {
 	for isSpace(l.peek()) {
 		l.next()
 	}
-	l.emit(itemSpace)
+	l.ignore()
 	return lexInsideAction
 }
 
@@ -160,13 +167,44 @@ func lexInsideAction(l *lexer) stateFn {
 	case r == '.':
 		l.emit(itemDot)
 		return lexInsideAction
-	case r == '(' || r == '\'':
-		return lexArgumentOpen
+	case r == '(':
+		return lexParenthesizedArgument
+	case r == '\'' || r == '"':
+		return lexQuotedArgument
 	case r == '/':
 		return lexCloser
 	default:
 		return l.errorf("Unexpected character %#U", r)
 	}
+}
+
+func lexQuotedArgument(l *lexer) stateFn {
+	l.backup()
+	opener := l.next()
+	l.ignore()
+	l.acceptRun(alphaNum)
+	if l.peek() == opener {
+		l.emit(itemQuotedArgument)
+		l.next()
+		l.ignore()
+	} else {
+		return l.errorf("Unbalanced quoting in argument")
+	}
+	return lexInsideAction
+}
+
+// Returns a itemParenthesizedArgument token sans parentheses
+func lexParenthesizedArgument(l *lexer) stateFn {
+	l.ignore()
+	l.acceptRun(alphaNum)
+	if l.peek() == ')' {
+		l.emit(itemParenthesizedArgument)
+		l.next()
+		l.ignore()
+	} else {
+		return l.errorf("Missing closing parenthesis on argument")
+	}
+	return lexInsideAction
 }
 
 func lexCloser(l *lexer) stateFn {
