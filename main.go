@@ -32,15 +32,19 @@ func main() {
 		case 0:
 			fmt.Printf(tok.Value)
 		case 1, 2:
-			fmt.Printf("%s%s%s", blue, tok.Value, reset)
+      prettyPrint(blue, tok.Value)
 		case 3:
-			fmt.Printf("%s%s%s", yellow, tok.Value, reset)
+      prettyPrint(yellow, tok.Value)
 		case 8:
-			fmt.Printf("%s%s%s", magenta, tok.Value, reset)
+      prettyPrint(magenta, tok.Value)
     case 6, 7:
-			fmt.Printf("%s%s%s", green, tok.Value, reset)
+      prettyPrint(green, tok.Value)
 		default:
 			fmt.Printf(tok.Value)
 		}
 	}
 }
+
+func prettyPrint(color string, content string) {
+    fmt.Printf("%s%s%s", color, content, reset)
+  }
