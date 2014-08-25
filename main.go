@@ -25,20 +25,20 @@ func main() {
 	for {
 		tok := lexer.NextToken()
 
-		if n := int(tok.Type); n == 9 || n == 11 {
+		if n := int(tok.Type); n == 11 || n == 13 {
 			break
 		}
 		switch int(tok.Type) {
 		case 0:
 			fmt.Printf(tok.Value)
 		case 1, 2:
-      prettyPrint(blue, tok.Value)
+			prettyPrint(blue, tok.Value)
 		case 3:
-      prettyPrint(yellow, tok.Value)
-		case 8:
-      prettyPrint(magenta, tok.Value)
-    case 6, 7:
-      prettyPrint(green, tok.Value)
+			prettyPrint(yellow, tok.Value)
+		case 10:
+			prettyPrint(magenta, tok.Value)
+		case 8, 9:
+			prettyPrint(green, tok.Value)
 		default:
 			fmt.Printf(tok.Value)
 		}
@@ -46,5 +46,5 @@ func main() {
 }
 
 func prettyPrint(color string, content string) {
-    fmt.Printf("%s%s%s", color, content, reset)
-  }
+	fmt.Printf("%s%s%s", color, content, reset)
+}

@@ -37,6 +37,7 @@ const (
 	itemArgumentClose
 	itemParenthesizedArgument
 	itemQuotedArgument
+	itemDotCommand
 	itemIdentifier
 	itemEOF
 	itemSpace
@@ -165,8 +166,7 @@ func lexInsideAction(l *lexer) stateFn {
 	case r == '}':
 		return lexRightMeta
 	case r == '.':
-		l.emit(itemDot)
-		return lexInsideAction
+		return lexDotCommand
 	case r == '(':
 		return lexParenthesizedArgument
 	case r == '\'' || r == '"':
@@ -176,6 +176,13 @@ func lexInsideAction(l *lexer) stateFn {
 	default:
 		return l.errorf("Unexpected character %#U", r)
 	}
+}
+
+func lexDotCommand(l *lexer) stateFn {
+	l.ignore() // ignore the dot, we know it's there
+	l.acceptRun(letters)
+	l.emit(itemDotCommand)
+	return lexInsideAction
 }
 
 func lexQuotedArgument(l *lexer) stateFn {
