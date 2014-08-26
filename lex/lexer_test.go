@@ -81,6 +81,12 @@ var lexTests = []lexTest{
 		{itemQuotedArgument, 0, "1234"},
 		{itemRightMeta, 0, "}}"},
 	}},
+	{"quoted argument with unbalanced quotes", `Behold, a video: {{ brightcove "1234' }}`, []item{
+		{itemText, 0, "Behold, a video: "},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "brightcove"},
+    {itemError, 0, "Unbalanced quoting in argument"},
+	}},
 	{"attachment with popup", "Here's an awesome attachment {{ attachments(350661).popup }}", []item{
 		{itemText, 0, "Here's an awesome attachment "},
 		{itemLeftMeta, 0, "{{"},
@@ -88,6 +94,12 @@ var lexTests = []lexTest{
 		{itemParenthesizedArgument, 0, "350661"},
 		{itemDotCommand, 0, "popup"},
 		{itemRightMeta, 0, "}}"},
+	}},
+	{"unbalanced parentheses", "Here's an awesome attachment {{ attachments(350661 }}", []item{
+		{itemText, 0, "Here's an awesome attachment "},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "attachments"},
+    {itemError, 0, "Missing closing parenthesis on argument"},
 	}},
 	{"attachment with modifiers", "Here's an awesome attachment {{ attachments(350661).popup big='true' }}", []item{
 		{itemText, 0, "Here's an awesome attachment "},
