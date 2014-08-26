@@ -30,7 +30,6 @@ const (
 	itemText itemType = iota
 	itemLeftMeta
 	itemRightMeta
-	itemCommand
 	itemSlash
 	itemParenthesizedArgument
 	itemQuotedArgument
@@ -39,7 +38,6 @@ const (
 	itemAssign
 	itemIdentifier
 	itemEOF
-	itemSpace
 	itemError
 )
 
@@ -157,7 +155,7 @@ func lexSpace(l *lexer) stateFn {
 func lexInsideAction(l *lexer) stateFn {
 	switch r := l.next(); {
 	case unicode.IsLetter(r):
-		return lexCommand
+		return lexIdentifier
 	case isSpace(r):
 		return lexSpace
 	case r == eof:
@@ -247,12 +245,12 @@ func lexParenthesizedArgument(l *lexer) stateFn {
 
 func lexCloser(l *lexer) stateFn {
 	l.emit(itemSlash)
-	return lexCommand
+	return lexIdentifier
 }
 
-func lexCommand(l *lexer) stateFn {
+func lexIdentifier(l *lexer) stateFn {
 	l.acceptRun(letters)
-	l.emit(itemCommand)
+	l.emit(itemIdentifier)
 	return lexInsideAction
 }
 
