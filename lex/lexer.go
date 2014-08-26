@@ -22,7 +22,7 @@ type itemType int
 type stateFn func(*lexer) stateFn
 
 const letters = "abcdefghijklmnopqrstuvwxyz_"
-const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyz"
+const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 const eof = -1
 
@@ -178,7 +178,7 @@ func lexInsideAction(l *lexer) stateFn {
 		} else {
 			return l.errorf("Malformed modifier")
 		}
-	case r == ',':
+	case r == ',' || r == '\n':
 		l.ignore()
 		return lexInsideAction
 	default:

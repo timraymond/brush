@@ -100,14 +100,22 @@ var lexTests = []lexTest{
 		{itemQuotedArgument, 0, "true"},
 		{itemRightMeta, 0, "}}"},
 	}},
-  {"ignore commas inside action", "Some plain text {{ photo_gallery 'foo', \"bar\"}}", []item{
-    {itemText, 0, "Some plain text "},
-    {itemLeftMeta, 0, "{{"},
-    {itemCommand, 0, "photo_gallery"},
-    {itemQuotedArgument, 0, "foo"},
-    {itemQuotedArgument, 0, "bar"},
-    {itemRightMeta, 0, "}}"},
-  }},
+	{"ignore commas inside action", "Some plain text {{ photo_gallery 'Foo', \"Bar\"}}", []item{
+		{itemText, 0, "Some plain text "},
+		{itemLeftMeta, 0, "{{"},
+		{itemCommand, 0, "photo_gallery"},
+		{itemQuotedArgument, 0, "Foo"},
+		{itemQuotedArgument, 0, "Bar"},
+		{itemRightMeta, 0, "}}"},
+	}},
+	{"ignore newlines in Braai tags", "Some plain text {{ photo_gallery 'Foo', \n\"Bar\"}}", []item{
+		{itemText, 0, "Some plain text "},
+		{itemLeftMeta, 0, "{{"},
+		{itemCommand, 0, "photo_gallery"},
+		{itemQuotedArgument, 0, "Foo"},
+		{itemQuotedArgument, 0, "Bar"},
+		{itemRightMeta, 0, "}}"},
+	}},
 }
 
 // Lexes the document in the test and returns a slice of items
