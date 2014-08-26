@@ -100,6 +100,20 @@ var lexTests = []lexTest{
 		{itemQuotedArgument, 0, "true"},
 		{itemRightMeta, 0, "}}"},
 	}},
+	{"multiple comma-separated modifiers", "Here's an awesome attachment {{ attachments(350661).popup big='true', bacon=\"yes\" }}", []item{
+		{itemText, 0, "Here's an awesome attachment "},
+		{itemLeftMeta, 0, "{{"},
+		{itemCommand, 0, "attachments"},
+		{itemParenthesizedArgument, 0, "350661"},
+		{itemDotCommand, 0, "popup"},
+		{itemCommand, 0, "big"},
+		{itemAssign, 0, "="},
+		{itemQuotedArgument, 0, "true"},
+		{itemCommand, 0, "bacon"},
+		{itemAssign, 0, "="},
+		{itemQuotedArgument, 0, "yes"},
+		{itemRightMeta, 0, "}}"},
+	}},
 	{"ignore commas inside action", "Some plain text {{ photo_gallery 'Foo', \"Bar\"}}", []item{
 		{itemText, 0, "Some plain text "},
 		{itemLeftMeta, 0, "{{"},
@@ -137,11 +151,17 @@ func TestLexing(t *testing.T) {
 
 		for idx, expected := range test.items {
 			actual := actualItems[idx]
+			// This will catch panics and print something useful in the
+			// test output instead
+			if actual.Type == itemError && expected.Type != itemError {
+				t.Errorf("%s:\n\tLexical Error: %s. Location: %d", test.name, actual.Value, actual.Pos)
+				break
+			}
 			if expected.Value != actual.Value {
-				t.Errorf("%s\n\tExpected \"%s\" to equal \"%s\"", test.name, actual.Value, expected.Value)
+				t.Errorf("%s:\n\tExpected \"%s\" to equal \"%s\"", test.name, actual.Value, expected.Value)
 			}
 			if expected.Type != actual.Type {
-				t.Errorf("%s\n\tExpected \"%s\" to equal \"%s\"", test.name, actual.Type, expected.Type)
+				t.Errorf("%s:\n\tExpected \"%s\" to equal \"%s\"", test.name, actual.Type, expected.Type)
 			}
 		}
 	}
