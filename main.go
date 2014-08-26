@@ -40,7 +40,7 @@ func main() {
 		case 8, 9:
 			prettyPrint(green, tok.Value)
 		default:
-			fmt.Printf(tok.Value)
+			prettyPrint(red, tok.Value)
 		}
 	}
 }

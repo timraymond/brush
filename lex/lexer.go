@@ -21,7 +21,7 @@ type itemType int
 
 type stateFn func(*lexer) stateFn
 
-const letters = "abcdefghijklmnopqrstuvwxyz"
+const letters = "abcdefghijklmnopqrstuvwxyz_"
 const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 const eof = -1
@@ -31,13 +31,11 @@ const (
 	itemLeftMeta
 	itemRightMeta
 	itemCommand
-	itemDot
 	itemSlash
-	itemArgumentOpen
-	itemArgumentClose
 	itemParenthesizedArgument
 	itemQuotedArgument
 	itemDotCommand
+	itemAssign
 	itemIdentifier
 	itemEOF
 	itemSpace
@@ -173,6 +171,16 @@ func lexInsideAction(l *lexer) stateFn {
 		return lexQuotedArgument
 	case r == '/':
 		return lexCloser
+	case r == '=':
+		l.emit(itemAssign)
+		if r = l.next(); r == '\'' || r == '"' {
+			return lexQuotedArgument
+		} else {
+			return l.errorf("Malformed modifier")
+		}
+	case r == ',':
+		l.ignore()
+		return lexInsideAction
 	default:
 		return l.errorf("Unexpected character %#U", r)
 	}
@@ -223,27 +231,6 @@ func lexCommand(l *lexer) stateFn {
 	l.acceptRun(letters)
 	l.emit(itemCommand)
 	return lexInsideAction
-}
-
-func lexArgumentOpen(l *lexer) stateFn {
-	l.emit(itemArgumentOpen)
-	return lexArgument
-}
-
-func lexArgumentClose(l *lexer) stateFn {
-	r := l.next()
-	if r == ')' || r == '\'' {
-		l.emit(itemArgumentClose)
-	} else {
-		return l.errorf("Unexpected character in argument: %#U", r)
-	}
-	return lexInsideAction
-}
-
-func lexArgument(l *lexer) stateFn {
-	l.acceptRun(alphaNum)
-	l.emit(itemIdentifier)
-	return lexArgumentClose
 }
 
 func isSpace(input rune) bool {
