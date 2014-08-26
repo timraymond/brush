@@ -130,6 +130,14 @@ var lexTests = []lexTest{
 		{itemQuotedArgument, 0, "Bar"},
 		{itemRightMeta, 0, "}}"},
 	}},
+	{"bracketed arguments", "Some plain text {{ article.attachments[\"The Thing\"] }}", []item{
+		{itemText, 0, "Some plain text "},
+		{itemLeftMeta, 0, "{{"},
+		{itemCommand, 0, "article"},
+		{itemDotCommand, 0, "attachments"},
+		{itemBracketedArgument, 0, "The Thing"},
+		{itemRightMeta, 0, "}}"},
+	}},
 }
 
 // Lexes the document in the test and returns a slice of items

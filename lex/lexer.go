@@ -22,7 +22,7 @@ type itemType int
 type stateFn func(*lexer) stateFn
 
 const letters = "abcdefghijklmnopqrstuvwxyz_"
-const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
 
 const eof = -1
 
@@ -34,6 +34,7 @@ const (
 	itemSlash
 	itemParenthesizedArgument
 	itemQuotedArgument
+	itemBracketedArgument
 	itemDotCommand
 	itemAssign
 	itemIdentifier
@@ -178,11 +179,33 @@ func lexInsideAction(l *lexer) stateFn {
 		} else {
 			return l.errorf("Malformed modifier")
 		}
+	case r == '[':
+		return lexBracketedArgument
 	case r == ',' || r == '\n':
 		l.ignore()
 		return lexInsideAction
 	default:
 		return l.errorf("Unexpected character %#U", r)
+	}
+}
+
+// Lexes arguments of the form ['A Tag'] or ["Another Tag"]. Enforces correct
+// balancing of quotation marks
+func lexBracketedArgument(l *lexer) stateFn {
+	if r := l.next(); r == '\'' || r == '"' {
+		l.ignore() // the parser is uninterested in quotations
+		l.acceptRun(alphaNum)
+		if l.peek() == r {
+			l.emit(itemBracketedArgument)
+			l.next()   // grab the closing quote
+			l.next()   // ...and the closing bracket
+			l.ignore() // ...and throw them away
+			return lexInsideAction
+		} else {
+			return l.errorf("Unbalanced quoting in bracketed argument")
+		}
+	} else {
+		return l.errorf("Malformed bracketed argument, expected quote")
 	}
 }
 
