@@ -181,6 +181,19 @@ var lexTests = []lexTest{
 		{itemBracketedArgument, 0, "Electrolux-EIDW5905JS-FrontClosed2.jpg"},
 		{itemRightMeta, 0, "}}"},
 	}},
+	{"arguments with underscores", "Some plain text {{ youtube 'fg_12345' }}", []item{
+		{itemText, 0, "Some plain text "},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "youtube"},
+		{itemQuotedArgument, 0, "fg_12345"},
+		{itemRightMeta, 0, "}}"},
+	}},
+	{"arguments with invalid char", "Some plain text {{ youtube 'fg?12345' }}", []item{
+		{itemText, 0, "Some plain text "},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "youtube"},
+    {itemError, 0, "Unexpected character U+003F '?'"},
+	}},
 	{"bracketed arguments with invalid characters", "Some plain text {{ article.attachments['Electrolux-EIDW5905JS-FrontClosed2?.jpg'] }}", []item{
 		{itemText, 0, "Some plain text "},
 		{itemLeftMeta, 0, "{{"},

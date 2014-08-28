@@ -22,7 +22,7 @@ type itemType int
 type stateFn func(*lexer) stateFn
 
 const letters = "abcdefghijklmnopqrstuvwxyz_"
-const alphaNum = "-.0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
+const alphaNum = "-._0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
 
 const eof = -1
 
@@ -225,14 +225,17 @@ func lexQuotedArgument(l *lexer) stateFn {
 	opener := l.next()
 	l.ignore()
 	l.acceptRun(alphaNum)
-	if l.peek() == opener {
+  switch l.peek() {
+  case opener:
 		l.emit(itemQuotedArgument)
 		l.next()
 		l.ignore()
-	} else {
+    return lexInsideAction
+  case '\'', '"':
 		return l.errorf("Unbalanced quoting in argument")
-	}
-	return lexInsideAction
+  default:
+    return l.errorf("Unexpected character %#U", l.peek())
+  }
 }
 
 // Returns a itemParenthesizedArgument token sans parentheses
