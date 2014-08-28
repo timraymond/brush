@@ -196,19 +196,23 @@ func lexInsideAction(l *lexer) stateFn {
 func lexBracketedArgument(l *lexer) stateFn {
 	if r := l.next(); r == '\'' || r == '"' {
 		l.ignore() // the parser is uninterested in quotations
-		l.acceptRun(filename)
-    switch l.peek() {
-    case r:
-			l.emit(itemBracketedArgument)
-			l.next()   // grab the closing quote
-			l.next()   // ...and the closing bracket
-			l.ignore() // ...and throw them away
-			return lexInsideAction
-    case '\'', '"':
-			return l.errorf("Unbalanced quoting in bracketed argument")
-    default:
-      return l.errorf("Unexpected character %#U", l.peek())
-		}
+    for {
+      switch l.next() {
+      case r:
+        if l.peek() == ']' {
+          l.backup()
+          l.emit(itemBracketedArgument)
+          l.next() // grab the closing quote
+          l.next() // ... and the closing bracket
+          l.ignore() // ... and throw them away
+          return lexInsideAction
+        } else {
+          return l.errorf("Malformed bracketed argument, expected quote")
+        }
+      case eof:
+        return l.errorf("Unterminated bracketed argument")
+      }
+    }
 	} else {
 		return l.errorf("Malformed bracketed argument, expected quote")
 	}
@@ -225,17 +229,17 @@ func lexQuotedArgument(l *lexer) stateFn {
 	l.backup()
 	opener := l.next()
 	l.ignore()
-	l.acceptRun(filename)
-  switch l.peek() {
-  case opener:
-		l.emit(itemQuotedArgument)
-		l.next()
-		l.ignore()
-    return lexInsideAction
-  case '\'', '"':
-		return l.errorf("Unbalanced quoting in argument")
-  default:
-    return l.errorf("Unexpected character %#U", l.peek())
+  for {
+    switch l.next() {
+    case opener:
+      l.backup()
+      l.emit(itemQuotedArgument)
+      l.next()
+      l.ignore()
+      return lexInsideAction
+    case eof:
+      return l.errorf("Unterminated quoted argument")
+    }
   }
 }
 

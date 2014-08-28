@@ -13,6 +13,8 @@ import (
   "github.com/reviewed/brush/lex"
 )
 
+const poolSize int = 70
+
 type lexingTest struct {
   body string
   slug string
@@ -22,7 +24,7 @@ type lexingTest struct {
 
 func main() {
   db := dbConnect()
-  rows, err := db.Query("select body, name from article_sections order by created_at desc limit 10000")
+  rows, err := db.Query("select body, name from article_sections order by created_at desc")
   if err != nil {
     log.Fatal(err)
   }
@@ -36,7 +38,7 @@ func main() {
   var completion = make(chan bool)
 
   var wg sync.WaitGroup
-  for i := 0; i < 50; i++ {
+  for i := 0; i < poolSize; i++ {
     wg.Add(1)
     go lexBody(completion, bodies, results)
   }
@@ -73,7 +75,7 @@ func collectResults(results chan bool, kill chan bool) {
       }
     case <-kill:
       killcount++
-      if killcount == 50 {
+      if killcount == poolSize {
         fmt.Printf("Succeeded: %d :: Failed %d", succeeded, failed)
         close(results)
         return
@@ -98,8 +100,8 @@ func lexBody(completion chan bool, bodyChan chan lexingTest, resultChan chan boo
         break
       }
       if int(tok.Type) == 11 {
-        fmt.Println(test.body)
-        fmt.Println("===")
+        //fmt.Println(test.body)
+        //fmt.Println("===")
         result = false
         break
       }

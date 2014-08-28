@@ -85,7 +85,7 @@ var lexTests = []lexTest{
 		{itemText, 0, "Behold, a video: "},
 		{itemLeftMeta, 0, "{{"},
 		{itemIdentifier, 0, "brightcove"},
-    {itemError, 0, "Unbalanced quoting in argument"},
+    {itemError, 0, "Unterminated quoted argument"},
 	}},
 	{"attachment with popup", "Here's an awesome attachment {{ attachments(350661).popup }}", []item{
 		{itemText, 0, "Here's an awesome attachment "},
@@ -181,32 +181,34 @@ var lexTests = []lexTest{
 		{itemBracketedArgument, 0, "Electrolux-EIDW5905JS-FrontClosed2.jpg"},
 		{itemRightMeta, 0, "}}"},
 	}},
-	{"arguments with special characters", "Some plain text {{ youtube 'fg_12345 / (turtles & unicorns in a café, of course)' }}", []item{
+	{"quoted arguments with special characters", "Some plain text {{ youtube 'fg_12345 / (turtles & unicorns in a café, of course)' }}", []item{
 		{itemText, 0, "Some plain text "},
 		{itemLeftMeta, 0, "{{"},
 		{itemIdentifier, 0, "youtube"},
-		{itemQuotedArgument, 0, "fg_12345 / (turtles & unicorns, of course)"},
+		{itemQuotedArgument, 0, "fg_12345 / (turtles & unicorns in a café, of course)"},
 		{itemRightMeta, 0, "}}"},
 	}},
-	{"arguments with invalid char", "Some plain text {{ youtube 'fg?12345' }}", []item{
-		{itemText, 0, "Some plain text "},
-		{itemLeftMeta, 0, "{{"},
-		{itemIdentifier, 0, "youtube"},
-    {itemError, 0, "Unexpected character U+003F '?'"},
-	}},
-	{"bracketed arguments with invalid characters", "Some plain text {{ article.attachments['Electrolux-EIDW5905JS-FrontClosed2?.jpg'] }}", []item{
+	{"bracketed arguments with special characters", "Some plain text {{ article.attachments['café-photos-&-first-floor-/-second-floor-(ね)).jpg']}}", []item{
 		{itemText, 0, "Some plain text "},
 		{itemLeftMeta, 0, "{{"},
 		{itemIdentifier, 0, "article"},
 		{itemDotCommand, 0, "attachments"},
-    {itemError, 0, "Unexpected character U+003F '?'"},
+		{itemBracketedArgument, 0, "café-photos-&-first-floor-/-second-floor-(ね)).jpg"},
+		{itemRightMeta, 0, "}}"},
 	}},
 	{"Unbalanced quoting in bracketed arguments", "Some plain text {{ article.attachments[\"The Thing'] }}", []item{
 		{itemText, 0, "Some plain text "},
 		{itemLeftMeta, 0, "{{"},
 		{itemIdentifier, 0, "article"},
 		{itemDotCommand, 0, "attachments"},
-		{itemError, 0, "Unbalanced quoting in bracketed argument"},
+		{itemError, 0, "Unterminated bracketed argument"},
+	}},
+	{"Unexpected termination of bracketed argument", "Some plain text {{ article.attachments['The Thing's things'] }}", []item{
+		{itemText, 0, "Some plain text "},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "article"},
+		{itemDotCommand, 0, "attachments"},
+		{itemError, 0, "Malformed bracketed argument, expected quote"},
 	}},
 	{"Malformed bracketed argument", "Some plain text {{ article.attachments[] }}", []item{
 		{itemText, 0, "Some plain text "},
