@@ -149,6 +149,14 @@ var lexTests = []lexTest{
 		{itemQuotedArgument, 0, "Bar"},
 		{itemRightMeta, 0, "}}"},
 	}},
+	{"unbalanced opening and closing meta", "Some plain text {{ photo_gallery 'Foo', \"Bar\"}", []item{
+		{itemText, 0, "Some plain text "},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "photo_gallery"},
+		{itemQuotedArgument, 0, "Foo"},
+		{itemQuotedArgument, 0, "Bar"},
+		{itemError, 0, "Malformed end of Braai tag, should be }}"},
+	}},
 	{"ignore newlines in Braai tags", "Some plain text {{ photo_gallery 'Foo', \n\"Bar\"}}", []item{
 		{itemText, 0, "Some plain text "},
 		{itemLeftMeta, 0, "{{"},
@@ -164,6 +172,21 @@ var lexTests = []lexTest{
 		{itemDotCommand, 0, "attachments"},
 		{itemBracketedArgument, 0, "The Thing"},
 		{itemRightMeta, 0, "}}"},
+	}},
+	{"bracketed arguments with a real file name", "Some plain text {{ article.attachments['Electrolux-EIDW5905JS-FrontClosed2.jpg'] }}", []item{
+		{itemText, 0, "Some plain text "},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "article"},
+		{itemDotCommand, 0, "attachments"},
+		{itemBracketedArgument, 0, "Electrolux-EIDW5905JS-FrontClosed2.jpg"},
+		{itemRightMeta, 0, "}}"},
+	}},
+	{"bracketed arguments with invalid characters", "Some plain text {{ article.attachments['Electrolux-EIDW5905JS-FrontClosed2?.jpg'] }}", []item{
+		{itemText, 0, "Some plain text "},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "article"},
+		{itemDotCommand, 0, "attachments"},
+    {itemError, 0, "Unexpected character U+003F '?'"},
 	}},
 	{"Unbalanced quoting in bracketed arguments", "Some plain text {{ article.attachments[\"The Thing'] }}", []item{
 		{itemText, 0, "Some plain text "},

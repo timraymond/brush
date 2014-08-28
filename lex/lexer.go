@@ -22,7 +22,7 @@ type itemType int
 type stateFn func(*lexer) stateFn
 
 const letters = "abcdefghijklmnopqrstuvwxyz_"
-const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
+const alphaNum = "-.0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
 
 const eof = -1
 
@@ -138,9 +138,12 @@ func lexLeftMeta(l *lexer) stateFn {
 }
 
 func lexRightMeta(l *lexer) stateFn {
-	l.pos += len("}")
-	l.emit(itemRightMeta)
-	return lexText
+  if l.accept("}}") {
+    l.emit(itemRightMeta)
+    return lexText
+  } else {
+    return l.errorf("Malformed end of Braai tag, should be }}")
+  }
 }
 
 // Braai ignores all whitespace within braai tags
@@ -193,14 +196,17 @@ func lexBracketedArgument(l *lexer) stateFn {
 	if r := l.next(); r == '\'' || r == '"' {
 		l.ignore() // the parser is uninterested in quotations
 		l.acceptRun(alphaNum)
-		if l.peek() == r {
+    switch l.peek() {
+    case r:
 			l.emit(itemBracketedArgument)
 			l.next()   // grab the closing quote
 			l.next()   // ...and the closing bracket
 			l.ignore() // ...and throw them away
 			return lexInsideAction
-		} else {
+    case '\'', '"':
 			return l.errorf("Unbalanced quoting in bracketed argument")
+    default:
+      return l.errorf("Unexpected character %#U", l.peek())
 		}
 	} else {
 		return l.errorf("Malformed bracketed argument, expected quote")
