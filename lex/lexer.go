@@ -22,7 +22,8 @@ type itemType int
 type stateFn func(*lexer) stateFn
 
 const letters = "abcdefghijklmnopqrstuvwxyz_"
-const alphaNum = "-._0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
+const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
+const filename = "-._()/,&é0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
 
 const eof = -1
 
@@ -195,7 +196,7 @@ func lexInsideAction(l *lexer) stateFn {
 func lexBracketedArgument(l *lexer) stateFn {
 	if r := l.next(); r == '\'' || r == '"' {
 		l.ignore() // the parser is uninterested in quotations
-		l.acceptRun(alphaNum)
+		l.acceptRun(filename)
     switch l.peek() {
     case r:
 			l.emit(itemBracketedArgument)
@@ -224,7 +225,7 @@ func lexQuotedArgument(l *lexer) stateFn {
 	l.backup()
 	opener := l.next()
 	l.ignore()
-	l.acceptRun(alphaNum)
+	l.acceptRun(filename)
   switch l.peek() {
   case opener:
 		l.emit(itemQuotedArgument)

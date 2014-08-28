@@ -181,11 +181,11 @@ var lexTests = []lexTest{
 		{itemBracketedArgument, 0, "Electrolux-EIDW5905JS-FrontClosed2.jpg"},
 		{itemRightMeta, 0, "}}"},
 	}},
-	{"arguments with underscores", "Some plain text {{ youtube 'fg_12345' }}", []item{
+	{"arguments with special characters", "Some plain text {{ youtube 'fg_12345 / (turtles & unicorns in a café, of course)' }}", []item{
 		{itemText, 0, "Some plain text "},
 		{itemLeftMeta, 0, "{{"},
 		{itemIdentifier, 0, "youtube"},
-		{itemQuotedArgument, 0, "fg_12345"},
+		{itemQuotedArgument, 0, "fg_12345 / (turtles & unicorns, of course)"},
 		{itemRightMeta, 0, "}}"},
 	}},
 	{"arguments with invalid char", "Some plain text {{ youtube 'fg?12345' }}", []item{
