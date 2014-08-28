@@ -1,50 +1,120 @@
 package main
 
 import (
-	"fmt"
-	"github.com/reviewed/brush/lex"
-	"io/ioutil"
+  "database/sql"
+  "log"
+  "net/http"
+  "os"
+  "sync"
+  "fmt"
+  _ "github.com/lib/pq"
+  _ "net/http/pprof"
+
+  "github.com/reviewed/brush/lex"
 )
 
-const (
-	red         = "\x1b[31m"
-	green       = "\x1b[32m"
-	brightgreen = "\x1b[1;32m"
-	yellow      = "\x1b[33m"
-	blue        = "\x1b[34m"
-	magenta     = "\x1b[35m"
-	reset       = "\x1b[0m"
-)
-
-func main() {
-	contents, err := ioutil.ReadFile("test.md")
-	if err != nil {
-		fmt.Println("Unable to read file")
-	}
-	lexer := lex.NewLexer(string(contents))
-	for {
-		tok := lexer.NextToken()
-
-		if n := int(tok.Type); n == 11 || n == 13 {
-			break
-		}
-		switch int(tok.Type) {
-		case 0:
-			fmt.Printf(tok.Value)
-		case 1, 2:
-			prettyPrint(blue, tok.Value)
-		case 3:
-			prettyPrint(yellow, tok.Value)
-		case 10:
-			prettyPrint(magenta, tok.Value)
-		case 8, 9:
-			prettyPrint(green, tok.Value)
-		default:
-			prettyPrint(red, tok.Value)
-		}
-	}
+type lexingTest struct {
+  body string
+  slug string
+  ok bool
+  pos int
 }
 
-func prettyPrint(color string, content string) {
-	fmt.Printf("%s%s%s", color, content, reset)
+func main() {
+  db := dbConnect()
+  rows, err := db.Query("select body, name from article_sections order by created_at desc")
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  go func() {
+    log.Println(http.ListenAndServe("localhost:6060", nil))
+  }()
+
+  var bodies = make(chan lexingTest)
+  var results = make(chan bool)
+  var completion = make(chan bool)
+
+  var wg sync.WaitGroup
+  for i := 0; i < 50; i++ {
+    wg.Add(1)
+    go lexBody(completion, bodies, results)
+  }
+
+  go collectResults(results, completion)
+
+  go func() {
+    var body, slug string
+    for rows.Next() {
+      rows.Scan(&body, &slug)
+      bodies <- lexingTest{body, slug, false, 0}
+    }
+    close(bodies)
+  }()
+
+  for _ = range results{
+  }
+}
+
+func collectResults(results chan bool, kill chan bool) {
+  succeeded := 0
+  failed := 0
+  killcount := 0
+  for {
+    select {
+    case result := <-results:
+      if result == true {
+        succeeded++
+      } else {
+        failed++
+      }
+      if total := succeeded + failed; total % 100 == 0 {
+        fmt.Printf("Completed: %d, %d/%d\n", total, failed, succeeded)
+      }
+    case <-kill:
+      killcount++
+      if killcount == 50 {
+        fmt.Printf("Succeeded: %d :: Failed %d", succeeded, failed)
+        close(results)
+        return
+      }
+    }
+  }
+}
+
+func lexBody(completion chan bool, bodyChan chan lexingTest, resultChan chan bool) {
+  for test := range bodyChan {
+    defer func() {
+      if r := recover(); r != nil {
+        fmt.Printf("Body: %s", test.body)
+      }
+    }()
+    lexer := lex.NewLexer(test.body)
+    var result bool
+    for {
+      tok := lexer.NextToken()
+      if int(tok.Type) == 10 {
+        result = true
+        break
+      }
+      if int(tok.Type) == 11 {
+        //fmt.Println(test.body)
+        //fmt.Println("===")
+        result = false
+        break
+      }
+    }
+    resultChan <- result
+  }
+  completion <- true
+}
+
+func dbConnect() *sql.DB {
+  os.Setenv("PGDATABASE", "reviewed_the_guide_development")
+  os.Setenv("PGSSLMODE", "disable")
+  conn, err := sql.Open("postgres", "")
+  if err != nil {
+    log.Fatal(err)
+  }
+  return conn
 }
