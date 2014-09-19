@@ -8,12 +8,13 @@ import (
 )
 
 type lexer struct {
-	input string    // the string being scanned
-	items chan item // holds scanned items
-	state stateFn   // current state of the lexer
-	start int       // start position in the input of the next token
-	pos   int       // current position in the input, will mark the end of the next token
-	width int       // width of the last read rune
+	input            string    // the string being scanned
+	items            chan item // holds scanned items
+	blockIds  []string  // identifiers which should be treated as block elments
+	state            stateFn   // current state of the lexer
+	start            int       // start position in the input of the next token
+	pos              int       // current position in the input, will mark the end of the next token
+	width            int       // width of the last read rune
 }
 
 // Represents different types of lexed items.
@@ -31,7 +32,8 @@ const (
 	itemText itemType = iota
 	itemLeftMeta
 	itemRightMeta
-	itemSlash
+	itemBlock
+  itemCloser
 	itemParenthesizedArgument
 	itemQuotedArgument
 	itemBracketedArgument
@@ -62,8 +64,8 @@ func (self *lexer) NextToken() item {
 }
 
 // Provides a new lexer for the given document
-func NewLexer(document string) *lexer {
-	return &lexer{input: document, state: lexText, items: make(chan item, 2)}
+func NewLexer(document string, blockIds []string) *lexer {
+  return &lexer{input: document, state: lexText, items: make(chan item, 2), blockIds: blockIds}
 }
 
 // emits a new item into the lexer's items channel
@@ -134,17 +136,24 @@ func lexText(l *lexer) stateFn {
 
 func lexLeftMeta(l *lexer) stateFn {
 	l.pos += len("{{")
-	l.emit(itemLeftMeta)
+  if tok := l.next(); tok  == '/' {
+    l.emit(itemCloser)
+  } else if tok == eof {
+    l.emit(itemLeftMeta)
+  } else {
+    l.backup()
+    l.emit(itemLeftMeta)
+  }
 	return lexInsideAction
 }
 
 func lexRightMeta(l *lexer) stateFn {
-  if l.accept("}}") {
-    l.emit(itemRightMeta)
-    return lexText
-  } else {
-    return l.errorf("Malformed end of Braai tag, should be }}")
-  }
+	if l.accept("}}") {
+		l.emit(itemRightMeta)
+		return lexText
+	} else {
+		return l.errorf("Malformed end of Braai tag, should be }}")
+	}
 }
 
 // Braai ignores all whitespace within braai tags
@@ -172,8 +181,6 @@ func lexInsideAction(l *lexer) stateFn {
 		return lexParenthesizedArgument
 	case r == '\'' || r == '"':
 		return lexQuotedArgument
-	case r == '/':
-		return lexCloser
 	case r == '=':
 		l.emit(itemAssign)
 		if r = l.next(); r == '\'' || r == '"' {
@@ -196,23 +203,23 @@ func lexInsideAction(l *lexer) stateFn {
 func lexBracketedArgument(l *lexer) stateFn {
 	if r := l.next(); r == '\'' || r == '"' {
 		l.ignore() // the parser is uninterested in quotations
-    for {
-      switch l.next() {
-      case r:
-        if l.peek() == ']' {
-          l.backup()
-          l.emit(itemBracketedArgument)
-          l.next() // grab the closing quote
-          l.next() // ... and the closing bracket
-          l.ignore() // ... and throw them away
-          return lexInsideAction
-        } else {
-          return l.errorf("Malformed bracketed argument, expected quote")
-        }
-      case eof:
-        return l.errorf("Unterminated bracketed argument")
-      }
-    }
+		for {
+			switch l.next() {
+			case r:
+				if l.peek() == ']' {
+					l.backup()
+					l.emit(itemBracketedArgument)
+					l.next()   // grab the closing quote
+					l.next()   // ... and the closing bracket
+					l.ignore() // ... and throw them away
+					return lexInsideAction
+				} else {
+					return l.errorf("Malformed bracketed argument, expected quote")
+				}
+			case eof:
+				return l.errorf("Unterminated bracketed argument")
+			}
+		}
 	} else {
 		return l.errorf("Malformed bracketed argument, expected quote")
 	}
@@ -229,18 +236,18 @@ func lexQuotedArgument(l *lexer) stateFn {
 	l.backup()
 	opener := l.next()
 	l.ignore()
-  for {
-    switch l.next() {
-    case opener:
-      l.backup()
-      l.emit(itemQuotedArgument)
-      l.next()
-      l.ignore()
-      return lexInsideAction
-    case eof:
-      return l.errorf("Unterminated quoted argument")
-    }
-  }
+	for {
+		switch l.next() {
+		case opener:
+			l.backup()
+			l.emit(itemQuotedArgument)
+			l.next()
+			l.ignore()
+			return lexInsideAction
+		case eof:
+			return l.errorf("Unterminated quoted argument")
+		}
+	}
 }
 
 // Returns a itemParenthesizedArgument token sans parentheses
@@ -257,15 +264,17 @@ func lexParenthesizedArgument(l *lexer) stateFn {
 	return lexInsideAction
 }
 
-func lexCloser(l *lexer) stateFn {
-	l.emit(itemSlash)
-	return lexIdentifier
-}
-
 func lexIdentifier(l *lexer) stateFn {
 	l.acceptRun(letters)
-	l.emit(itemIdentifier)
-	return lexInsideAction
+  id := string([]byte(l.input)[l.start:l.pos])
+  for _, blockId := range l.blockIds {
+    if blockId == id {
+      l.emit(itemBlock)
+      return lexInsideAction
+    }
+  }
+  l.emit(itemIdentifier)
+  return lexInsideAction
 }
 
 func isSpace(input rune) bool {

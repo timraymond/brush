@@ -24,7 +24,7 @@ type lexingTest struct {
 
 func main() {
   db := dbConnect()
-  rows, err := db.Query("select body, name from article_sections order by created_at desc")
+  rows, err := db.Query("select body, name from article_sections where id in ( '85502', '85507', '85506', '85504', '85505' )")
   if err != nil {
     log.Fatal(err)
   }
@@ -91,20 +91,29 @@ func lexBody(completion chan bool, bodyChan chan lexingTest, resultChan chan boo
         fmt.Printf("Body: %s", test.body)
       }
     }()
-    lexer := lex.NewLexer(test.body)
+    //lexer := lex.NewLexer(test.body)
     var result bool
-    for {
-      tok := lexer.NextToken()
-      if int(tok.Type) == 10 {
-        result = true
-        break
-      }
-      if int(tok.Type) == 11 {
+    //for {
+      //tok := lexer.NextToken()
+      //if int(tok.Type) == 10 {
+        //result = true
+        //break
+      //}
+      //if int(tok.Type) == 11 {
         //fmt.Println(test.body)
         //fmt.Println("===")
-        result = false
-        break
-      }
+        //result = false
+        //break
+      //}
+    //}
+    ast, err := lex.New(test.body).Parse()
+    if err != nil {
+      fmt.Println(err)
+      fmt.Println(ast)
+      result = true
+    } else {
+      fmt.Println(ast)
+      result = false
     }
     resultChan <- result
   }

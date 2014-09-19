@@ -1,8 +1,6 @@
 package lex
 
-import (
-	"testing"
-)
+import "testing"
 
 type lexTest struct {
 	name  string
@@ -54,7 +52,7 @@ var lexTests = []lexTest{
 	{"attachment in a callout", "# Editors’ Choice Awards{{callout}}{{ attachments(349807) }}{{/callout}}", []item{
 		{itemText, 0, "# Editors’ Choice Awards"},
 		{itemLeftMeta, 0, "{{"},
-		{itemIdentifier, 0, "callout"},
+		{itemBlock, 0, "callout"},
 		{itemRightMeta, 0, "}}"},
 		{itemText, 0, ""},
 		{itemLeftMeta, 0, "{{"},
@@ -62,9 +60,8 @@ var lexTests = []lexTest{
 		{itemParenthesizedArgument, 0, "349807"},
 		{itemRightMeta, 0, "}}"},
 		{itemText, 0, ""}, // These are transition points between braai/text
-		{itemLeftMeta, 0, "{{"},
-		{itemSlash, 0, "/"},
-		{itemIdentifier, 0, "callout"},
+		{itemCloser, 0, "{{/"},
+		{itemBlock, 0, "callout"},
 		{itemRightMeta, 0, "}}"},
 	}},
 	{"brightcove", "Behold, a video: {{ brightcove '1234' }}", []item{
@@ -229,7 +226,8 @@ var lexTests = []lexTest{
 
 // Lexes the document in the test and returns a slice of items
 func collect(t *lexTest) (items []item) {
-	lexer := NewLexer(t.input)
+  blockElements := []string{"callout"}
+	lexer := NewLexer(t.input, blockElements)
 	for {
 		item := lexer.NextToken()
 		items = append(items, item)
