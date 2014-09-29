@@ -1,6 +1,10 @@
-package lex
+package parse
 
-import "strings"
+import (
+  "strings"
+
+  "github.com/russross/blackfriday"
+)
 
 const (
 	red         = "\x1b[31m"
@@ -14,6 +18,7 @@ const (
 
 type Node interface{
   String() string
+  Html() string
 }
 
 type DocumentNode struct {
@@ -28,6 +33,16 @@ func (d *DocumentNode) String() string {
   return strings.Join(parts, "")
 }
 
+func (d *DocumentNode) Html() string {
+  var parts = make([]string, 0)
+  parts = append(parts, "<div class=\"section\">")
+  for _, node := range d.NodeList {
+    parts = append(parts, node.Html())
+  }
+  parts = append(parts, "</div>")
+  return strings.Join(parts, "")
+}
+
 type BlockTagNode struct {
   Name string
   Subtree Node
@@ -35,6 +50,10 @@ type BlockTagNode struct {
 
 func (b *BlockTagNode) String() string {
   return magenta + "{{ " + b.Name + " }} " + reset + b.Subtree.String() + magenta + "{{/ " + b.Name + " }}" + reset
+}
+
+func (b *BlockTagNode) Html() string {
+  return `<span class="block-tag ` + b.Name + `">` + b.Subtree.Html() + `</span>`
 }
 
 type TextNode struct {
@@ -45,9 +64,14 @@ func (t *TextNode) String() string {
   return string(t.Text)
 }
 
+func (t *TextNode) Html() string {
+  return `<p>` + string(blackfriday.MarkdownBasic(t.Text)) + `</p>`
+}
+
 type BraaiTagNode struct {
   Text string
   DotCommands []Node
+  Arguments []string
   Attributes map[string]string
 }
 
@@ -58,11 +82,27 @@ func (b *BraaiTagNode) String() string {
   for _, cmd := range b.DotCommands {
     parts = append(parts, cmd.String())
   }
+
+  for _, arg := range b.Arguments {
+    parts = append(parts, brightgreen + "\"" + arg + "\", " + reset)
+  }
+
   for k, v := range b.Attributes {
     parts = append(parts, yellow + " " + k + "=" + "\"" + v + "\" " + reset)
   }
   parts = append(parts, red + " }}" + reset)
   return strings.Join(parts, "")
+}
+
+func (b *BraaiTagNode) Html() string {
+  switch b.Text {
+  case "break":
+    return `<br />`
+  case "attachments":
+    return `<div style="color: #f00">This would be an attachment</div>`
+  default:
+    return `<span class="braai-tag">` + b.Text + `</span>`
+  }
 }
 
 type SingleArgumentNode struct {
@@ -71,6 +111,10 @@ type SingleArgumentNode struct {
 
 func (s *SingleArgumentNode) String() string {
   return blue + "( " + s.Text + " )" + reset
+}
+
+func (s *SingleArgumentNode) Html() string {
+  return `<span class="single-arg">` + s.Text + `</span>`
 }
 
 type DotCommandNode struct {
@@ -85,3 +129,8 @@ func (d *DotCommandNode) String() string {
     return green + "." + d.Text + reset
   }
 }
+
+func (d *DotCommandNode) Html() string {
+  return `<span class="dot-command">` + d.Text + `</span>`
+}
+

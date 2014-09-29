@@ -1,4 +1,4 @@
-package lex
+package parse
 
 import "fmt"
 
@@ -72,11 +72,34 @@ func (t *Tree) blockOrRegular() Node {
 
 // REGULAR -> itemIdent DOTCOMMANDS ARG_LIST MODIFIERS itemRightMeta
 func (t *Tree) braaiTag() Node {
-  tok := t.expect(itemIdentifier, "braai tag")
+  ident := t.expect(itemIdentifier, "braai tag")
+  tok := t.next()
+  var arguments []string = make([]string, 0)
+  switch tok.Type {
+  case itemParenthesizedArgument, itemBracketedArgument:
+    arguments = append(arguments, tok.Value)
+  default:
+    t.backup()
+  }
   dotCommands := t.dotCommands()
+  for _, arg := range t.argumentList() {
+    arguments = append(arguments, arg)
+  }
   attrs := t.attributes()
   t.expect(itemRightMeta, "braai tag")
-  return &BraaiTagNode{tok.Value, dotCommands, attrs}
+  return &BraaiTagNode{ident.Value, dotCommands, arguments, attrs}
+}
+
+func (t *Tree) argumentList() (arguments []string) {
+  for {
+    tok := t.next()
+    if tok.Type != itemQuotedArgument {
+      t.backup()
+      break
+    }
+    arguments = append(arguments, tok.Value)
+  }
+  return
 }
 
 func (t *Tree) attributes() map[string]string {
@@ -177,6 +200,6 @@ func (t *Tree) expect(expected itemType, context string) item {
   return tok
 }
 
-func New(input string) *Tree {
-  return &Tree{lexer: NewLexer(input, []string{"callout"}), Error: nil}
+func New(input string, blockTags []string) *Tree {
+  return &Tree{lexer: NewLexer(input, blockTags), Error: nil}
 }

@@ -1,4 +1,4 @@
-package lex
+package parse
 
 import (
   "testing"
@@ -30,11 +30,16 @@ var parseTests = []parseTest{
   {"nested callouts", "You've got an attachment in my callout! {{callout}}{{article.attachments(1235).popup}}{{/callout}} some other text {{callout}}I'm in a callout{{/callout}} ending text", noError, `You've got an attachment in my callout! {{callout}}{{article.attachments(1235).popup}}{{/callout}}`},
   {"attributes", "Here's a photo gallery {{photo_gallery name='blah'}}", noError, `You've got an attachment in my callout! {{callout}}{{article.attachments(1235).popup}}{{/callout}}`},
   {"multiple attributes", "Here's a photo gallery {{photo_gallery name='blah', size=\"big\"}}", noError, `You've got an attachment in my callout! {{callout}}{{article.attachments(1235).popup}}{{/callout}}`},
+  {"argument list", "Egads, it's a gallery with an arglist {{ photo_gallery \"Ashtray\", \"Garbage Can\", \"Doorknob\" }}", noError, `You've got an attachment in my callout! {{callout}}{{article.attachments(1235).popup}}{{/callout}}`},
+  {"a menagerie of braai", "And all together now! {{callout}}{{ photo_gallery \"Ashtray\", \"Garbage Can\", \"Doorknob\" size=\"big\" }}{{/callout}}", noError, `You've got an attachment in my callout! {{callout}}{{article.attachments(1235).popup}}{{/callout}}`},
+  {"a menagerie of braai, and dot commands", "And all together now! {{callout}}{{ article.attachments(1234) \"Ashtray\", \"Garbage Can\", \"Doorknob\" size=\"big\" }}{{/callout}}", noError, `You've got an attachment in my callout! {{callout}}{{article.attachments(1235).popup}}{{/callout}}`},
+  {"a menagerie of braai, and dot commands", "And all together now! {{callout}}{{ article.attachments[\"Upper Deck\"] \"Ashtray\", \"Garbage Can\", \"Doorknob\" size=\"big\" }}{{/callout}}", noError, `You've got an attachment in my callout! {{callout}}{{article.attachments(1235).popup}}{{/callout}}`},
+  {"float right", "This should be floated right: {{float_right}}{{ attachments(346360).popup }}{{/float_right}}", noError, "This should be floated right: {{float_right}}{{ article.attachments(12345).popup }}{{/float_right}}"},
 }
 
 func TestParse(t *testing.T) {
   for _, test := range parseTests {
-    ast, err := New(test.input).Parse()
+    ast, err := New(test.input, []string{"callout", "float_right"}).Parse()
     if ast != nil {
       fmt.Println(ast)
     }
