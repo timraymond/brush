@@ -95,3 +95,25 @@ func Test_WithDotCommandsShouldExplode(t *testing.T) {
     }
   }
 }
+
+func Test_BlockHandlers(t *testing.T) {
+  const doc string = "Here's some text with {{bold}}emphasis{{/bold}}"
+
+  handlers := brush.NewHandlerMux()
+  handlers.HandleBlockFunc("bold", func(tag *brush.BlockTagNode) (string, error) {
+    subtree, err := tag.Subtree.Execute(handlers)
+    if err != nil {
+      return "", err
+    } else {
+      return "<bold>" + subtree + "</bold>", nil
+    }
+  })
+
+  ast, err := brush.New(doc, handlers.BlockHandlers()).Parse()
+  if assert.NoError(t, err) {
+    result, err := ast.Execute(handlers)
+    if assert.NoError(t, err) {
+      assert.Equal(t, "Here's some text with <bold>emphasis</bold>", result)
+    }
+  }
+}
