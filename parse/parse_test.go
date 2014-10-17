@@ -2,7 +2,6 @@ package parse
 
 import (
   "testing"
-  "fmt"
 )
 
 type parseTest struct {
@@ -39,10 +38,7 @@ var parseTests = []parseTest{
 
 func TestParse(t *testing.T) {
   for _, test := range parseTests {
-    ast, err := New(test.input, []string{"callout", "float_right"}).Parse()
-    if ast != nil {
-      fmt.Println(ast)
-    }
+    _, err := New(test.input, []string{"callout", "float_right"}).Parse()
 
     if err != nil && test.ok == noError {
       t.Errorf("%s:\n\tUnexpected Parse Error: %s", test.name, err)
