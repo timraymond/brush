@@ -138,7 +138,7 @@ func (t *Tree) blockTag() Node {
 }
 
 // DOTCOMMANDS -> itemDotCommand SINGLE_ARGS DOTCOMMANDS | ε
-func (t *Tree) dotCommands() (dotCommands []Node) {
+func (t *Tree) dotCommands() (dotCommands []DotCommandNode) {
   for {
     tok := t.next()
     if tok.Type != itemDotCommand {
@@ -146,7 +146,7 @@ func (t *Tree) dotCommands() (dotCommands []Node) {
       break
     } else {
       argument := t.singleArgument()
-      dotCommands = append(dotCommands, &DotCommandNode{tok.Value, argument})
+      dotCommands = append(dotCommands, DotCommandNode{tok.Value, argument})
     }
   }
   return dotCommands
