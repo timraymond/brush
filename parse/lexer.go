@@ -22,18 +22,18 @@ type itemType int
 
 type stateFn func(*lexer) stateFn
 
-const letters = "abcdefghijklmnopqrstuvwxyz_"
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"
 const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
 const filename = "-._()/,&é0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
 
 const eof = -1
 
 const (
-	itemText itemType = iota
-	itemLeftMeta
-	itemRightMeta
-	itemBlock
-  itemCloser
+	itemText itemType = iota // an unprocessed block of opaque text
+	itemLeftMeta // the beginning of a braai tag
+	itemRightMeta // the end of a braai tag
+	itemBlock // an identifier specified as a block tag
+  itemCloser // a block identifier prefixed by a slash
 	itemParenthesizedArgument
 	itemQuotedArgument
 	itemBracketedArgument
@@ -106,6 +106,18 @@ func (l *lexer) peek() rune {
 	r := l.next()
 	l.backup()
 	return r
+}
+
+func (l *lexer) lineNumber() int {
+  return 1 + strings.Count(l.input[:l.pos], "\n")
+}
+
+func (l *lexer) column() int {
+  lastNewline := strings.LastIndex(l.input[:l.pos], "\n")
+  if lastNewline == -1 {
+    lastNewline = 0
+  }
+  return utf8.RuneCountInString(l.input[lastNewline:l.start])
 }
 
 func (l *lexer) ignore() {
@@ -185,7 +197,9 @@ func lexInsideAction(l *lexer) stateFn {
 		l.emit(itemAssign)
 		if r = l.next(); r == '\'' || r == '"' {
 			return lexQuotedArgument
-		} else {
+		} else if r == 't' || r == 'f' {
+      return lexBoolean
+    } else {
 			return l.errorf("Malformed modifier")
 		}
 	case r == '[':
@@ -198,6 +212,30 @@ func lexInsideAction(l *lexer) stateFn {
 	}
 }
 
+func lexBoolean(l *lexer) stateFn {
+  l.backup()
+  if l.accept("t") {
+    for i := 0; i < 3; i++ {
+      l.next()
+    }
+    if boolean := l.input[l.start:l.pos]; boolean == "true" {
+      l.emit(itemQuotedArgument)
+    } else {
+      l.errorf("Expected boolean true, saw %s", boolean)
+    }
+  } else if l.accept("f") {
+    for i := 0; i < 4; i++ {
+      l.next()
+    }
+    if boolean := l.input[l.start:l.pos]; boolean == "false" {
+      l.emit(itemQuotedArgument)
+    } else {
+      l.errorf("Expected boolean false, saw %s", boolean)
+    }
+  }
+
+  return lexInsideAction
+}
 // Lexes arguments of the form ['A Tag'] or ["Another Tag"]. Enforces correct
 // balancing of quotation marks
 func lexBracketedArgument(l *lexer) stateFn {

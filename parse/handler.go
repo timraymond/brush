@@ -11,6 +11,7 @@ import (
 type HandlerMux struct {
   funcs map[string]HandlerFunc
   blockFuncs map[string]BlockHandlerFunc
+  defaultHandler HandlerFunc
 }
 
 // A HandlerFunc is a function which receives the raw BraaiTagNode, and is
@@ -26,6 +27,16 @@ type BlockHandlerFunc func(*BlockTagNode) (string, error)
 // HandleFunc registers a HandlerFunc with this HandlerMux
 func (h *HandlerMux) HandleFunc(ident string, f HandlerFunc) {
   h.funcs[ident] = f
+}
+
+// DefaultHandler is invoked when no Braai tag matches any defined handler
+func (h *HandlerMux) DefaultHandler(f func(*BraaiTagNode) (string, error)) {
+  h.defaultHandler = HandlerFunc(f)
+}
+
+// GetDefaultHandler returns the registered default handler if present, otherwise nil
+func (h *HandlerMux) GetDefaultHandler() HandlerFunc {
+  return h.defaultHandler
 }
 
 // HandleBlockFunc registers a BlockHandlerFunc with this HandlerMux

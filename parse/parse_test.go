@@ -8,7 +8,7 @@ type parseTest struct {
   name string
   input string
   ok bool
-  result string
+  errorMsg string
 }
 
 const (
@@ -36,9 +36,15 @@ var parseTests = []parseTest{
   {"float right", "This should be floated right: {{float_right}}{{ attachments(346360).popup }}{{/float_right}}", noError, "This should be floated right: {{float_right}}{{ article.attachments(12345).popup }}{{/float_right}}"},
 }
 
+var errorTests = []parseTest{
+  // Ensure line numbers work
+  {"unterminated", "Foo {{photo_gallery}", hasError, `unterminated:1:19: Lexical Error - Malformed end of Braai tag, should be }}`},
+  {"invalidchar", "Foo\n\n{{foo?}}", hasError, `invalidchar:3:6: Lexical Error - Unexpected character U+003F '?'`},
+}
+
 func TestParse(t *testing.T) {
   for _, test := range parseTests {
-    _, err := New(test.input, []string{"callout", "float_right"}).Parse()
+    _, err := New(test.name, test.input, []string{"callout", "float_right"}).Parse()
 
     if err != nil && test.ok == noError {
       t.Errorf("%s:\n\tUnexpected Parse Error: %s", test.name, err)
@@ -49,3 +55,18 @@ func TestParse(t *testing.T) {
     }
   }
 }
+
+func TestParseErrors(t *testing.T) {
+  for _, test := range errorTests {
+    _, err := New(test.name, test.input, []string{}).Parse()
+
+    if err != nil && test.errorMsg != err.Error() {
+      t.Errorf("%s\n\tError message mismatch. Expected: \"%s\", Actual: \"%s\"", test.name, test.errorMsg, err.Error())
+    }
+    
+    if err == nil {
+      t.Errorf("%s\n\tNo parse errors, place this test in parseTests", test.name)
+    }
+  }
+}
+

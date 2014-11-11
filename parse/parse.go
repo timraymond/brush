@@ -1,17 +1,36 @@
 package parse
 
 import "fmt"
+import "strconv"
 
+// A Tree holds all of the parsing state necessary to transform a document into
+// an AST
 type Tree struct {
-  lexer *lexer
-  Error error
-  token item
-  peekCount int
-  blockLevel int
+  lexer *lexer // the lexer which is the source of tokens
+  Error error // the last returned error
+  ParseName string // the name of the document being parsed
+  token item // maintains one token lookahead
+  peekCount int // count of how many tokens of lookahead we have
+  lastCol int // column of the last item in the lookahead buffer
+  blockLevel int // nesting level of block tags
 }
 
-func (t *Tree) Parse() (Node, error) {
-  root := t.document()
+func (t *Tree) formatPos() string {
+  if t.peekCount == 0 {
+    return t.ParseName + ":" + strconv.Itoa(t.lexer.lineNumber()) + ":" + strconv.Itoa(t.lexer.column()) + ": "
+  } else {
+    return t.ParseName + ":" + strconv.Itoa(t.lexer.lineNumber()) + ":" + strconv.Itoa(t.lastCol) + ": "
+  }
+}
+
+// Parse creates an AST from the document that the parser was initialized with.
+func (t *Tree) Parse() (root Node, err error) {
+  defer func() {
+    if r := recover(); r != nil {
+      err = r.(error)
+    }
+  }()
+  root = t.document()
   if t.Error != nil {
     return nil, t.Error
   } else {
@@ -72,6 +91,7 @@ func (t *Tree) blockOrRegular() Node {
 
 // REGULAR -> itemIdent DOTCOMMANDS ARG_LIST MODIFIERS itemRightMeta
 func (t *Tree) braaiTag() Node {
+  posFormat := t.formatPos()
   ident := t.expect(itemIdentifier, "braai tag")
   tok := t.next()
   var arguments []string = make([]string, 0)
@@ -87,7 +107,7 @@ func (t *Tree) braaiTag() Node {
   }
   attrs := t.attributes()
   t.expect(itemRightMeta, "braai tag")
-  return &BraaiTagNode{ident.Value, dotCommands, arguments, attrs}
+  return &BraaiTagNode{ident.Value, dotCommands, arguments, attrs, posFormat}
 }
 
 func (t *Tree) argumentList() (arguments []string) {
@@ -168,6 +188,7 @@ func (t *Tree) singleArgument() Node {
 
 func (t *Tree) next() item {
   if t.peekCount == 0 {
+    t.lastCol = t.lexer.column()
     t.token = t.lexer.NextToken()
   } else {
     t.peekCount--
@@ -177,6 +198,11 @@ func (t *Tree) next() item {
 
 func (t *Tree) backup() {
   t.peekCount++
+}
+
+func (t *Tree) errorf(format string, args ...interface{}) {
+  format = fmt.Sprintf("%s:%d:%d: %s", t.ParseName, t.lexer.lineNumber(), t.lexer.column(), format)
+  panic(fmt.Errorf(format, args...))
 }
 
 func (t *Tree) expectOneOf(expected ...itemType) item {
@@ -195,11 +221,18 @@ func (t *Tree) expect(expected itemType, context string) item {
   tok := t.next()
   if tok.Type != expected {
     t.backup()
-    t.Error = fmt.Errorf("Unexpected %s in %s at position %d. Expected %d, saw %d", tok.Value, context, tok.Pos, expected, tok.Type)
+    if tok.Type == itemError {
+      t.errorf("Lexical Error - %s", tok.Value)
+    } else {
+      t.errorf("Unexpected %d, expected to see %d", tok.Value, expected)
+    }
+    //t.Error = fmt.Errorf("Unexpected %s in %s at position %d. Expected %d, saw %d", tok.Value, context, tok.Pos, expected, tok.Type)
   }
   return tok
 }
 
-func New(input string, blockTags []string) *Tree {
-  return &Tree{lexer: NewLexer(input, blockTags), Error: nil}
+// New returns a *Tree which is initialized with a lexer so that parsing can
+// proceed immediately
+func New(name string, input string, blockTags []string) *Tree {
+  return &Tree{ParseName: name, lexer: NewLexer(input, blockTags), Error: nil}
 }

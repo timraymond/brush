@@ -21,7 +21,7 @@ func Test_Works(t *testing.T) {
     return "tim", nil
   }))
 
-  ast, err = brush.New(doc, []string{}).Parse()
+  ast, err = brush.New("exectest", doc, []string{}).Parse()
   if assert.NoError(t, err) {
     result, err = ast.Execute(handlers)
     if assert.NoError(t, err) {
@@ -40,11 +40,11 @@ func Test_DiesIfNoHandler(t *testing.T) {
     return "tim", nil
   }))
 
-  ast, err = brush.New(doc, []string{}).Parse()
+  ast, err = brush.New("exectest", doc, []string{}).Parse()
   if assert.NoError(t, err) {
     _, err = ast.Execute(handlers)
     if assert.Error(t, err) {
-      assert.Equal(t, "Handler not defined for tag: greeting", err.Error())
+      assert.Equal(t, "exectest:1:14: Exec error - Handler not defined for tag: [greeting]", err.Error())
     }
   }
 }
@@ -70,7 +70,7 @@ func Test_WithDotCommands(t *testing.T) {
   handlers := brush.NewHandlerMux()
   handlers.Handle("product", &ProductHandler{"Canon Foo"})
 
-  ast, err = brush.New(doc, []string{}).Parse()
+  ast, err = brush.New("exectest", doc, []string{}).Parse()
   if assert.NoError(t, err) {
     result, err = ast.Execute(handlers)
     if assert.NoError(t, err) {
@@ -87,7 +87,7 @@ func Test_WithDotCommandsShouldExplode(t *testing.T) {
   handlers := brush.NewHandlerMux()
   handlers.Handle("product", &ProductHandler{"Canon Foo"})
 
-  ast, err = brush.New(doc, []string{}).Parse()
+  ast, err = brush.New("exectest", doc, []string{}).Parse()
   if assert.NoError(t, err) {
     _, err = ast.Execute(handlers)
     if assert.Error(t, err) {
@@ -109,11 +109,29 @@ func Test_BlockHandlers(t *testing.T) {
     }
   })
 
-  ast, err := brush.New(doc, handlers.BlockHandlers()).Parse()
+  ast, err := brush.New("exectest", doc, handlers.BlockHandlers()).Parse()
   if assert.NoError(t, err) {
     result, err := ast.Execute(handlers)
     if assert.NoError(t, err) {
       assert.Equal(t, "Here's some text with <bold>emphasis</bold>", result)
+    }
+  }
+}
+
+func Test_Default_Handlers(t *testing.T) {
+  const doc string = "Tag 1: {{foo}}, Tag 2: {{bar}}"
+
+  tags := make([]string, 0, 2)
+  handlers := brush.NewHandlerMux()
+  handlers.DefaultHandler(func(tag *brush.BraaiTagNode) (string, error) {
+    tags = append(tags, tag.Text)
+    return "{{ " + tag.Text + "}}", nil
+  })
+  ast, err := brush.New("default", doc, handlers.BlockHandlers()).Parse()
+  if assert.NoError(t, err) {
+    _, err := ast.Execute(handlers)
+    if assert.NoError(t, err) {
+      assert.Equal(t, tags, []string{"foo", "bar"})
     }
   }
 }
