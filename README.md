@@ -1,6 +1,8 @@
 Brush
 =====
 
+[![Build Status](https://travis-ci.org/timraymond/brush.svg?branch=master)](https://travis-ci.org/timraymond/brush)
+
 Brush is a compiler for the Braai templating language written in Go.
 Braai allows development teams to supply a limited vocabulary of
 transformation functions to be used by editorial organizations. This
