@@ -8,13 +8,13 @@ import (
 )
 
 type lexer struct {
-	input            string    // the string being scanned
-	items            chan item // holds scanned items
-	blockIds  []string  // identifiers which should be treated as block elments
-	state            stateFn   // current state of the lexer
-	start            int       // start position in the input of the next token
-	pos              int       // current position in the input, will mark the end of the next token
-	width            int       // width of the last read rune
+	input    string    // the string being scanned
+	items    chan item // holds scanned items
+	blockIds []string  // identifiers which should be treated as block elments
+	state    stateFn   // current state of the lexer
+	start    int       // start position in the input of the next token
+	pos      int       // current position in the input, will mark the end of the next token
+	width    int       // width of the last read rune
 }
 
 // Represents different types of lexed items.
@@ -29,11 +29,11 @@ const filename = "-._()/,&é0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP
 const eof = -1
 
 const (
-	itemText itemType = iota // an unprocessed block of opaque text
-	itemLeftMeta // the beginning of a braai tag
-	itemRightMeta // the end of a braai tag
-	itemBlock // an identifier specified as a block tag
-  itemCloser // a block identifier prefixed by a slash
+	itemText      itemType = iota // an unprocessed block of opaque text
+	itemLeftMeta                  // the beginning of a braai tag
+	itemRightMeta                 // the end of a braai tag
+	itemBlock                     // an identifier specified as a block tag
+	itemCloser                    // a block identifier prefixed by a slash
 	itemParenthesizedArgument
 	itemQuotedArgument
 	itemBracketedArgument
@@ -65,7 +65,7 @@ func (self *lexer) NextToken() item {
 
 // Provides a new lexer for the given document
 func NewLexer(document string, blockIds []string) *lexer {
-  return &lexer{input: document, state: lexText, items: make(chan item, 2), blockIds: blockIds}
+	return &lexer{input: document, state: lexText, items: make(chan item, 2), blockIds: blockIds}
 }
 
 // emits a new item into the lexer's items channel
@@ -109,15 +109,15 @@ func (l *lexer) peek() rune {
 }
 
 func (l *lexer) lineNumber() int {
-  return 1 + strings.Count(l.input[:l.pos], "\n")
+	return 1 + strings.Count(l.input[:l.pos], "\n")
 }
 
 func (l *lexer) column() int {
-  lastNewline := strings.LastIndex(l.input[:l.pos], "\n")
-  if lastNewline == -1 {
-    lastNewline = 0
-  }
-  return utf8.RuneCountInString(l.input[lastNewline:l.start])
+	lastNewline := strings.LastIndex(l.input[:l.pos], "\n")
+	if lastNewline == -1 {
+		lastNewline = 0
+	}
+	return utf8.RuneCountInString(l.input[lastNewline:l.start])
 }
 
 func (l *lexer) ignore() {
@@ -148,14 +148,14 @@ func lexText(l *lexer) stateFn {
 
 func lexLeftMeta(l *lexer) stateFn {
 	l.pos += len("{{")
-  if tok := l.next(); tok  == '/' {
-    l.emit(itemCloser)
-  } else if tok == eof {
-    l.emit(itemLeftMeta)
-  } else {
-    l.backup()
-    l.emit(itemLeftMeta)
-  }
+	if tok := l.next(); tok == '/' {
+		l.emit(itemCloser)
+	} else if tok == eof {
+		l.emit(itemLeftMeta)
+	} else {
+		l.backup()
+		l.emit(itemLeftMeta)
+	}
 	return lexInsideAction
 }
 
@@ -198,8 +198,8 @@ func lexInsideAction(l *lexer) stateFn {
 		if r = l.next(); r == '\'' || r == '"' {
 			return lexQuotedArgument
 		} else if r == 't' || r == 'f' {
-      return lexBoolean
-    } else {
+			return lexBoolean
+		} else {
 			return l.errorf("Malformed modifier")
 		}
 	case r == '[':
@@ -213,29 +213,30 @@ func lexInsideAction(l *lexer) stateFn {
 }
 
 func lexBoolean(l *lexer) stateFn {
-  l.backup()
-  if l.accept("t") {
-    for i := 0; i < 3; i++ {
-      l.next()
-    }
-    if boolean := l.input[l.start:l.pos]; boolean == "true" {
-      l.emit(itemQuotedArgument)
-    } else {
-      l.errorf("Expected boolean true, saw %s", boolean)
-    }
-  } else if l.accept("f") {
-    for i := 0; i < 4; i++ {
-      l.next()
-    }
-    if boolean := l.input[l.start:l.pos]; boolean == "false" {
-      l.emit(itemQuotedArgument)
-    } else {
-      l.errorf("Expected boolean false, saw %s", boolean)
-    }
-  }
+	l.backup()
+	if l.accept("t") {
+		for i := 0; i < 3; i++ {
+			l.next()
+		}
+		if boolean := l.input[l.start:l.pos]; boolean == "true" {
+			l.emit(itemQuotedArgument)
+		} else {
+			l.errorf("Expected boolean true, saw %s", boolean)
+		}
+	} else if l.accept("f") {
+		for i := 0; i < 4; i++ {
+			l.next()
+		}
+		if boolean := l.input[l.start:l.pos]; boolean == "false" {
+			l.emit(itemQuotedArgument)
+		} else {
+			l.errorf("Expected boolean false, saw %s", boolean)
+		}
+	}
 
-  return lexInsideAction
+	return lexInsideAction
 }
+
 // Lexes arguments of the form ['A Tag'] or ["Another Tag"]. Enforces correct
 // balancing of quotation marks
 func lexBracketedArgument(l *lexer) stateFn {
@@ -304,15 +305,15 @@ func lexParenthesizedArgument(l *lexer) stateFn {
 
 func lexIdentifier(l *lexer) stateFn {
 	l.acceptRun(letters)
-  id := string([]byte(l.input)[l.start:l.pos])
-  for _, blockId := range l.blockIds {
-    if blockId == id {
-      l.emit(itemBlock)
-      return lexInsideAction
-    }
-  }
-  l.emit(itemIdentifier)
-  return lexInsideAction
+	id := string([]byte(l.input)[l.start:l.pos])
+	for _, blockId := range l.blockIds {
+		if blockId == id {
+			l.emit(itemBlock)
+			return lexInsideAction
+		}
+	}
+	l.emit(itemIdentifier)
+	return lexInsideAction
 }
 
 func isSpace(input rune) bool {

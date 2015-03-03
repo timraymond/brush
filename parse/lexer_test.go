@@ -82,7 +82,7 @@ var lexTests = []lexTest{
 		{itemText, 0, "Behold, a video: "},
 		{itemLeftMeta, 0, "{{"},
 		{itemIdentifier, 0, "brightcove"},
-    {itemError, 0, "Unterminated quoted argument"},
+		{itemError, 0, "Unterminated quoted argument"},
 	}},
 	{"attachment with popup", "Here's an awesome attachment {{ attachments(350661).popup }}", []item{
 		{itemText, 0, "Here's an awesome attachment "},
@@ -96,7 +96,7 @@ var lexTests = []lexTest{
 		{itemText, 0, "Here's an awesome attachment "},
 		{itemLeftMeta, 0, "{{"},
 		{itemIdentifier, 0, "attachments"},
-    {itemError, 0, "Missing closing parenthesis on argument"},
+		{itemError, 0, "Missing closing parenthesis on argument"},
 	}},
 	{"attachment with modifiers", "Here's an awesome attachment {{ attachments(350661).popup big='true' }}", []item{
 		{itemText, 0, "Here's an awesome attachment "},
@@ -222,40 +222,40 @@ var lexTests = []lexTest{
 		{itemBracketedArgument, 0, "The Thing"},
 		{itemRightMeta, 0, "}}"},
 	}},
-  {"handle capital letters in modifier name", "{{comparison_bars title=\"Video: Low Light Noise Score Comparison\", attribute=\"Video Low Light Noise Score\", comps=\"video\", xLabel=\"Video Low Light Noise Score\"}}", []item{
-    {itemText, 0, ""},
-    {itemLeftMeta, 0, "{{"},
-    {itemIdentifier, 0, "comparison_bars"},
-    {itemIdentifier, 0, "title"},
-    {itemAssign, 0, "="},
-    {itemQuotedArgument, 0, "Video: Low Light Noise Score Comparison"},
-    {itemIdentifier, 0, "attribute"},
-    {itemAssign, 0, "="},
-    {itemQuotedArgument, 0, "Video Low Light Noise Score"},
-    {itemIdentifier, 0, "comps"},
-    {itemAssign, 0, "="},
-    {itemQuotedArgument, 0, "video"},
-    {itemIdentifier, 0, "xLabel"},
-    {itemAssign, 0, "="},
-    {itemQuotedArgument, 0, "Video Low Light Noise Score"},
-    {itemRightMeta, 0, "}}"},
-  }},
-  {"handle boolean modifiers", "{{product.attachments['FI Handling Photo 2'] include_caption=true}}", []item{
-    {itemText, 0, ""},
-    {itemLeftMeta, 0, "{{"},
-    {itemIdentifier, 0, "product"},
-    {itemDotCommand, 0, "attachments"},
-    {itemBracketedArgument, 0, "FI Handling Photo 2"},
-    {itemIdentifier, 0, "include_caption"},
-    {itemAssign, 0, "="},
-    {itemQuotedArgument, 0, "true"},
-    {itemRightMeta, 0, "}}"},
-  }},
+	{"handle capital letters in modifier name", "{{comparison_bars title=\"Video: Low Light Noise Score Comparison\", attribute=\"Video Low Light Noise Score\", comps=\"video\", xLabel=\"Video Low Light Noise Score\"}}", []item{
+		{itemText, 0, ""},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "comparison_bars"},
+		{itemIdentifier, 0, "title"},
+		{itemAssign, 0, "="},
+		{itemQuotedArgument, 0, "Video: Low Light Noise Score Comparison"},
+		{itemIdentifier, 0, "attribute"},
+		{itemAssign, 0, "="},
+		{itemQuotedArgument, 0, "Video Low Light Noise Score"},
+		{itemIdentifier, 0, "comps"},
+		{itemAssign, 0, "="},
+		{itemQuotedArgument, 0, "video"},
+		{itemIdentifier, 0, "xLabel"},
+		{itemAssign, 0, "="},
+		{itemQuotedArgument, 0, "Video Low Light Noise Score"},
+		{itemRightMeta, 0, "}}"},
+	}},
+	{"handle boolean modifiers", "{{product.attachments['FI Handling Photo 2'] include_caption=true}}", []item{
+		{itemText, 0, ""},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "product"},
+		{itemDotCommand, 0, "attachments"},
+		{itemBracketedArgument, 0, "FI Handling Photo 2"},
+		{itemIdentifier, 0, "include_caption"},
+		{itemAssign, 0, "="},
+		{itemQuotedArgument, 0, "true"},
+		{itemRightMeta, 0, "}}"},
+	}},
 }
 
 // Lexes the document in the test and returns a slice of items
 func collect(t *lexTest) (items []item) {
-  blockElements := []string{"callout"}
+	blockElements := []string{"callout"}
 	lexer := NewLexer(t.input, blockElements)
 	for {
 		item := lexer.NextToken()

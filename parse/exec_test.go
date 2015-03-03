@@ -1,137 +1,137 @@
 package parse_test
 
 import (
-  "testing"
+	"testing"
 
-  "github.com/stretchr/testify/assert"
-  brush "github.com/timraymond/brush/parse"
+	"github.com/stretchr/testify/assert"
+	brush "github.com/timraymond/brush/parse"
 )
 
 func Test_Works(t *testing.T) {
-  const doc string = "A greeting: {{greeting}}, {{name}}!"
-  var err error
-  var ast brush.Node
-  var result string
+	const doc string = "A greeting: {{greeting}}, {{name}}!"
+	var err error
+	var ast brush.Node
+	var result string
 
-  handlers := brush.NewHandlerMux()
-  handlers.HandleFunc("greeting", brush.HandlerFunc(func(tag *brush.BraaiTagNode) (string, error) {
-    return "Hello there", nil
-  }))
-  handlers.HandleFunc("name", brush.HandlerFunc(func(tag *brush.BraaiTagNode) (string, error) {
-    return "tim", nil
-  }))
+	handlers := brush.NewHandlerMux()
+	handlers.HandleFunc("greeting", brush.HandlerFunc(func(tag *brush.BraaiTagNode) (string, error) {
+		return "Hello there", nil
+	}))
+	handlers.HandleFunc("name", brush.HandlerFunc(func(tag *brush.BraaiTagNode) (string, error) {
+		return "tim", nil
+	}))
 
-  ast, err = brush.New("exectest", doc, []string{}).Parse()
-  if assert.NoError(t, err) {
-    result, err = ast.Execute(handlers)
-    if assert.NoError(t, err) {
-      assert.Equal(t, "A greeting: Hello there, tim!", result)
-    }
-  }
+	ast, err = brush.New("exectest", doc, []string{}).Parse()
+	if assert.NoError(t, err) {
+		result, err = ast.Execute(handlers)
+		if assert.NoError(t, err) {
+			assert.Equal(t, "A greeting: Hello there, tim!", result)
+		}
+	}
 }
 
 func Test_DiesIfNoHandler(t *testing.T) {
-  const doc string = "A greeting: {{greeting}}, {{name}}!"
-  var err error
-  var ast brush.Node
+	const doc string = "A greeting: {{greeting}}, {{name}}!"
+	var err error
+	var ast brush.Node
 
-  handlers := brush.NewHandlerMux()
-  handlers.HandleFunc("name", brush.HandlerFunc(func(tag *brush.BraaiTagNode) (string, error) {
-    return "tim", nil
-  }))
+	handlers := brush.NewHandlerMux()
+	handlers.HandleFunc("name", brush.HandlerFunc(func(tag *brush.BraaiTagNode) (string, error) {
+		return "tim", nil
+	}))
 
-  ast, err = brush.New("exectest", doc, []string{}).Parse()
-  if assert.NoError(t, err) {
-    _, err = ast.Execute(handlers)
-    if assert.Error(t, err) {
-      assert.Equal(t, "exectest:1:14: Exec error - Handler not defined for tag: [greeting]", err.Error())
-    }
-  }
+	ast, err = brush.New("exectest", doc, []string{}).Parse()
+	if assert.NoError(t, err) {
+		_, err = ast.Execute(handlers)
+		if assert.Error(t, err) {
+			assert.Equal(t, "exectest:1:14: Exec error - Handler not defined for tag: [greeting]", err.Error())
+		}
+	}
 }
 
 type ProductHandler struct {
-  ProductName string
+	ProductName string
 }
 
 func (p *ProductHandler) Name(modelNum string) (string, error) {
-  return p.ProductName + " " + modelNum, nil
+	return p.ProductName + " " + modelNum, nil
 }
 
 func (p *ProductHandler) Adjective() (string, error) {
-  return "greatest", nil
+	return "greatest", nil
 }
 
 func Test_WithDotCommands(t *testing.T) {
-  const doc string = "The {{product.name['9000']}} is the {{product.adjective}} camera"
-  var err error
-  var ast brush.Node
-  var result string
+	const doc string = "The {{product.name['9000']}} is the {{product.adjective}} camera"
+	var err error
+	var ast brush.Node
+	var result string
 
-  handlers := brush.NewHandlerMux()
-  handlers.Handle("product", &ProductHandler{"Canon Foo"})
+	handlers := brush.NewHandlerMux()
+	handlers.Handle("product", &ProductHandler{"Canon Foo"})
 
-  ast, err = brush.New("exectest", doc, []string{}).Parse()
-  if assert.NoError(t, err) {
-    result, err = ast.Execute(handlers)
-    if assert.NoError(t, err) {
-      assert.Equal(t, "The Canon Foo 9000 is the greatest camera", result)
-    }
-  }
+	ast, err = brush.New("exectest", doc, []string{}).Parse()
+	if assert.NoError(t, err) {
+		result, err = ast.Execute(handlers)
+		if assert.NoError(t, err) {
+			assert.Equal(t, "The Canon Foo 9000 is the greatest camera", result)
+		}
+	}
 }
 
 func Test_WithDotCommandsShouldExplode(t *testing.T) {
-  const doc string = "The {{product.name['9000']}} is the {{product.verb}} camera"
-  var err error
-  var ast brush.Node
+	const doc string = "The {{product.name['9000']}} is the {{product.verb}} camera"
+	var err error
+	var ast brush.Node
 
-  handlers := brush.NewHandlerMux()
-  handlers.Handle("product", &ProductHandler{"Canon Foo"})
+	handlers := brush.NewHandlerMux()
+	handlers.Handle("product", &ProductHandler{"Canon Foo"})
 
-  ast, err = brush.New("exectest", doc, []string{}).Parse()
-  if assert.NoError(t, err) {
-    _, err = ast.Execute(handlers)
-    if assert.Error(t, err) {
-      assert.Equal(t, "Undefined method `Verb` for product handler", err.Error())
-    }
-  }
+	ast, err = brush.New("exectest", doc, []string{}).Parse()
+	if assert.NoError(t, err) {
+		_, err = ast.Execute(handlers)
+		if assert.Error(t, err) {
+			assert.Equal(t, "Undefined method `Verb` for product handler", err.Error())
+		}
+	}
 }
 
 func Test_BlockHandlers(t *testing.T) {
-  const doc string = "Here's some text with {{bold}}emphasis{{/bold}}"
+	const doc string = "Here's some text with {{bold}}emphasis{{/bold}}"
 
-  handlers := brush.NewHandlerMux()
-  handlers.HandleBlockFunc("bold", func(tag *brush.BlockTagNode) (string, error) {
-    subtree, err := tag.Subtree.Execute(handlers)
-    if err != nil {
-      return "", err
-    } else {
-      return "<bold>" + subtree + "</bold>", nil
-    }
-  })
+	handlers := brush.NewHandlerMux()
+	handlers.HandleBlockFunc("bold", func(tag *brush.BlockTagNode) (string, error) {
+		subtree, err := tag.Subtree.Execute(handlers)
+		if err != nil {
+			return "", err
+		} else {
+			return "<bold>" + subtree + "</bold>", nil
+		}
+	})
 
-  ast, err := brush.New("exectest", doc, handlers.BlockHandlers()).Parse()
-  if assert.NoError(t, err) {
-    result, err := ast.Execute(handlers)
-    if assert.NoError(t, err) {
-      assert.Equal(t, "Here's some text with <bold>emphasis</bold>", result)
-    }
-  }
+	ast, err := brush.New("exectest", doc, handlers.BlockHandlers()).Parse()
+	if assert.NoError(t, err) {
+		result, err := ast.Execute(handlers)
+		if assert.NoError(t, err) {
+			assert.Equal(t, "Here's some text with <bold>emphasis</bold>", result)
+		}
+	}
 }
 
 func Test_Default_Handlers(t *testing.T) {
-  const doc string = "Tag 1: {{foo}}, Tag 2: {{bar}}"
+	const doc string = "Tag 1: {{foo}}, Tag 2: {{bar}}"
 
-  tags := make([]string, 0, 2)
-  handlers := brush.NewHandlerMux()
-  handlers.DefaultHandler(func(tag *brush.BraaiTagNode) (string, error) {
-    tags = append(tags, tag.Text)
-    return "{{ " + tag.Text + "}}", nil
-  })
-  ast, err := brush.New("default", doc, handlers.BlockHandlers()).Parse()
-  if assert.NoError(t, err) {
-    _, err := ast.Execute(handlers)
-    if assert.NoError(t, err) {
-      assert.Equal(t, tags, []string{"foo", "bar"})
-    }
-  }
+	tags := make([]string, 0, 2)
+	handlers := brush.NewHandlerMux()
+	handlers.DefaultHandler(func(tag *brush.BraaiTagNode) (string, error) {
+		tags = append(tags, tag.Text)
+		return "{{ " + tag.Text + "}}", nil
+	})
+	ast, err := brush.New("default", doc, handlers.BlockHandlers()).Parse()
+	if assert.NoError(t, err) {
+		_, err := ast.Execute(handlers)
+		if assert.NoError(t, err) {
+			assert.Equal(t, tags, []string{"foo", "bar"})
+		}
+	}
 }
