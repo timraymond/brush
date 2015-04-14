@@ -251,18 +251,18 @@ var lexTests = []lexTest{
 		{itemQuotedArgument, 0, "true"},
 		{itemRightMeta, 0, "}}"},
 	}},
-  {"handle colons and dots in modifier names", "{{ product_shelf max:msrp=\"800\" category__slug=\"foo\" }}", []item{
-    {itemText, 0, ""},
-    {itemLeftMeta, 0, "{{"},
-    {itemIdentifier, 0, "product_shelf"},
-    {itemIdentifier, 0, "max:msrp"},
+	{"handle colons and dots in modifier names", "{{ product_shelf max:msrp=\"800\" category__slug=\"foo\" }}", []item{
+		{itemText, 0, ""},
+		{itemLeftMeta, 0, "{{"},
+		{itemIdentifier, 0, "product_shelf"},
+		{itemIdentifier, 0, "max:msrp"},
 		{itemAssign, 0, "="},
 		{itemQuotedArgument, 0, "800"},
-    {itemIdentifier, 0, "category__slug"},
+		{itemIdentifier, 0, "category__slug"},
 		{itemAssign, 0, "="},
 		{itemQuotedArgument, 0, "foo"},
 		{itemRightMeta, 0, "}}"},
-  }},
+	}},
 }
 
 // Lexes the document in the test and returns a slice of items

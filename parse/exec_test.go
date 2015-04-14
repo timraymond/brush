@@ -135,3 +135,43 @@ func Test_Default_Handlers(t *testing.T) {
 		}
 	}
 }
+
+type TestVisitor struct {
+	Ids []string
+}
+
+func (tv *TestVisitor) AcceptTag(tag *brush.BraaiTagNode) {
+	tv.Ids = append(tv.Ids, tag.Attributes["id"])
+}
+
+func (tv *TestVisitor) AcceptBlockTag(tag *brush.BlockTagNode) {
+	// NOP
+}
+
+func (tv *TestVisitor) AcceptTextNode(tag *brush.TextNode) {
+	// NOP
+}
+
+func Test_Visitors(t *testing.T) {
+	const doc string = `Here's a bunch of tags: {{ foo id="12345" }} {{ foo id="45678" }}`
+
+	expected := []string{
+		"12345",
+		"45678",
+	}
+
+	tv := &TestVisitor{make([]string, 0, 2)}
+	handlers := brush.NewHandlerMux()
+	ast, err := brush.New("default", doc, handlers.BlockHandlers()).Parse()
+
+	if err != nil {
+		t.Errorf("Visitor Test: encountered error: %s", err.Error())
+	}
+
+	ast.Visit(tv)
+	for i, elem := range expected {
+		if tv.Ids[i] != elem {
+			t.Errorf("Visitor Test: Expected %s to equal %s", tv.Ids[i], elem)
+		}
+	}
+}
