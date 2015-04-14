@@ -10,6 +10,17 @@ import (
 // Node in a Braai AST.
 type Node interface {
 	Execute(*HandlerMux) (string, error)
+	Visit(Visitor)
+}
+
+// A Visitor implements the Visitor pattern for Brush ASTs. When passed to the
+// Visit method of a Node, the Visitor's methods will be called on the Nodes of
+// the AST in depth-first traversal order. The method invoked will depend on
+// the Type of Node encountered
+type Visitor interface {
+	AcceptTag(*BraaiTagNode)
+	AcceptBlockTag(*BlockTagNode)
+	AcceptTextNode(*TextNode)
 }
 
 // A DocumentNode represents a complete Braai document. There are no
@@ -37,6 +48,14 @@ func (d *DocumentNode) Execute(mux *HandlerMux) (str string, err error) {
 	return strings.Join(parts, ""), err
 }
 
+// Visit implements the Visitor interface for DocumentNodes. It has no
+// corresponding Accept method, so it simply visits its children Nodes
+func (d *DocumentNode) Visit(v Visitor) {
+	for _, node := range d.NodeList {
+		node.Visit(v)
+	}
+}
+
 // A BlockTagNode represents a block-form BraaiTag, such as foo in this example:
 //   {{foo}}Content {{bar(1234)}}{{/foo}}
 // All content within the Block is provided as the Subtree Node.
@@ -57,6 +76,14 @@ func (b *BlockTagNode) Execute(mux *HandlerMux) (string, error) {
 	}
 }
 
+// Visit implements the Visitor interface for BlockTags. Visit is first invoked
+// on the Subtree to preserve depth-first traversal order, and then the
+// AcceptBlockTag method of the Visitor is invoked with this BlockTag.
+func (b *BlockTagNode) Visit(v Visitor) {
+	b.Subtree.Visit(v)
+	v.AcceptBlockTag(b)
+}
+
 // A TextNode represents text devoid of any Braai tags. These are left
 // unmodified by handlers.
 type TextNode struct {
@@ -66,6 +93,12 @@ type TextNode struct {
 // Execute passes the TextNode's Text  back to the caller
 func (t *TextNode) Execute(mux *HandlerMux) (string, error) {
 	return string(t.Text), nil
+}
+
+// Visit invokes the AcceptTextNode method of the Visitor, passing this
+// TextNode in accordance with the Visitor pattern
+func (t *TextNode) Visit(v Visitor) {
+	v.AcceptTextNode(t)
 }
 
 // A BraaiTagNode represents a non-block Braai tag. All DotCommands, Arguments,
@@ -99,6 +132,12 @@ func (b *BraaiTagNode) Errorf(format string, args ...interface{}) error {
 	return fmt.Errorf(format, args)
 }
 
+// Visit presents this BraaiTag to the Visitor by way of its AcceptTag method,
+// implementing the Visitor interface
+func (b *BraaiTagNode) Visit(v Visitor) {
+	v.AcceptTag(b)
+}
+
 // A SingleArgumentNode represents an argument appearing in parentheses
 // following a top level command or one following a dot command.
 type SingleArgumentNode struct {
@@ -109,6 +148,10 @@ type SingleArgumentNode struct {
 // BraaiTagHandler will manipulate this directly in the BraaiTag
 func (t *SingleArgumentNode) Execute(mux *HandlerMux) (string, error) {
 	return t.Text, nil
+}
+
+func (t *SingleArgumentNode) Visit(v Visitor) {
+	// NOP
 }
 
 // A DotCommandNode represents a command appearing after the primary command in

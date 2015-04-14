@@ -1,6 +1,8 @@
 package parse_test
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -134,4 +136,65 @@ func Test_Default_Handlers(t *testing.T) {
 			assert.Equal(t, tags, []string{"foo", "bar"})
 		}
 	}
+}
+
+type TestVisitor struct {
+	Ids []string
+}
+
+func (tv *TestVisitor) AcceptTag(tag *brush.BraaiTagNode) {
+	tv.Ids = append(tv.Ids, tag.Attributes["id"])
+}
+
+func (tv *TestVisitor) AcceptBlockTag(tag *brush.BlockTagNode) {
+	// NOP
+}
+
+func (tv *TestVisitor) AcceptTextNode(tag *brush.TextNode) {
+	// NOP
+}
+
+func (tv *TestVisitor) String() string {
+	return "Here are my ids: " + strings.Join(tv.Ids, ", ")
+}
+
+func Test_Visitors(t *testing.T) {
+	const doc string = `Here's a bunch of tags: {{ foo id="12345" }} {{ foo id="45678" }}`
+
+	expected := []string{
+		"12345",
+		"45678",
+	}
+
+	tv := &TestVisitor{make([]string, 0, 2)}
+	handlers := brush.NewHandlerMux()
+	ast, err := brush.New("default", doc, handlers.BlockHandlers()).Parse()
+
+	if err != nil {
+		t.Errorf("Visitor Test: encountered error: %s", err.Error())
+	}
+
+	ast.Visit(tv)
+	for i, elem := range expected {
+		if tv.Ids[i] != elem {
+			t.Errorf("Visitor Test: Expected %s to equal %s", tv.Ids[i], elem)
+		}
+	}
+}
+
+func ExampleCompositeVisitor() {
+	document := `
+  This is a document with some tags that have ids:
+  {{ foo id="4815162342" }}
+  {{ foo id="8675309" }}
+  `
+	testVisitor := &TestVisitor{make([]string, 0, 2)}
+	cv := brush.NewCompositeVisitor(testVisitor)
+	handlers := brush.NewHandlerMux()
+	ast, _ := brush.New("default", document, handlers.BlockHandlers()).Parse()
+
+	ast.Visit(cv)
+
+	fmt.Println(testVisitor)
+	// Output: Here are my ids: 4815162342, 8675309
 }
