@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -28,6 +29,9 @@ const filename = "-._()/,&é0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP
 
 const eof = -1
 
+var spaceAlreadyScanned bool
+
+//go:generate stringer -type=itemType
 const (
 	itemText      itemType = iota // an unprocessed block of opaque text
 	itemLeftMeta                  // the beginning of a braai tag
@@ -70,8 +74,13 @@ func NewLexer(document string, blockIds []string) *lexer {
 
 // emits a new item into the lexer's items channel
 func (self *lexer) emit(t itemType) {
-	self.items <- item{t, self.start, self.input[self.start:self.pos]}
-	self.start = self.pos
+  select {
+  case self.items <- item{t, self.start, self.input[self.start:self.pos]}:
+    self.start = self.pos
+    return
+  default:
+    log.Panicf("Token stream full attempting to emit token %s at %d with value %s", t, self.pos, self.input[self.start:self.pos])
+  }
 }
 
 func (self *lexer) backup() {
@@ -170,9 +179,9 @@ func lexRightMeta(l *lexer) stateFn {
 
 // Braai ignores all whitespace within braai tags
 func lexSpace(l *lexer) stateFn {
-	for isSpace(l.peek()) {
-		l.next()
+	for isSpace(l.next()) {
 	}
+  l.backup()
 	l.ignore()
 	return lexInsideAction
 }
@@ -180,20 +189,33 @@ func lexSpace(l *lexer) stateFn {
 func lexInsideAction(l *lexer) stateFn {
 	switch r := l.next(); {
 	case unicode.IsLetter(r):
+    spaceAlreadyScanned = false
 		return lexIdentifier
-	case isSpace(r):
-		return lexSpace
 	case r == eof:
-		return l.errorf("Unexpected end of action")
+    spaceAlreadyScanned = false
+    l.emit(itemRightMeta)
+    return nil
+	case isSpace(r):
+    if spaceAlreadyScanned == false {
+      spaceAlreadyScanned = true
+      return lexSpace
+    } else {
+      return l.errorf("Space already scanned - Lexer defect")
+    }
 	case r == '}':
+    spaceAlreadyScanned = false
 		return lexRightMeta
 	case r == '.':
+    spaceAlreadyScanned = false
 		return lexDotCommand
 	case r == '(':
+    spaceAlreadyScanned = false
 		return lexParenthesizedArgument
 	case r == '\'' || r == '"':
+    spaceAlreadyScanned = false
 		return lexQuotedArgument
 	case r == '=':
+    spaceAlreadyScanned = false
 		l.emit(itemAssign)
 		if r = l.next(); r == '\'' || r == '"' {
 			return lexQuotedArgument
@@ -203,11 +225,17 @@ func lexInsideAction(l *lexer) stateFn {
 			return l.errorf("Malformed modifier")
 		}
 	case r == '[':
+    spaceAlreadyScanned = false
 		return lexBracketedArgument
-	case r == ',' || r == '\n':
+	case r == ',':
+    spaceAlreadyScanned = false
 		l.ignore()
 		return lexInsideAction
+  case r == '\n':
+    l.emit(itemRightMeta)
+    return lexText
 	default:
+    spaceAlreadyScanned = false
 		return l.errorf("Unexpected character %#U", r)
 	}
 }
@@ -317,7 +345,7 @@ func lexIdentifier(l *lexer) stateFn {
 }
 
 func isSpace(input rune) bool {
-	if input == ' ' || input == '\t' {
+	if input == ' ' || input == '\t' || input == '\u00a0' {
 		return true
 	} else {
 		return false

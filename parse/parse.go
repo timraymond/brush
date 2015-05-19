@@ -66,7 +66,7 @@ func (t *Tree) document() Node {
 				return root
 			}
 		default:
-			t.Error = fmt.Errorf("Unexpected token %d at %d", tok.Type, tok.Pos)
+			t.Error = fmt.Errorf("Unexpected token %s at %d", tok.Type, tok.Pos)
 			return root
 		}
 	}
@@ -84,7 +84,7 @@ func (t *Tree) blockOrRegular() Node {
 		t.backup()
 		return t.blockTag()
 	} else {
-		t.Error = fmt.Errorf("Unexpected token %d at %d", tok.Type, tok.Pos)
+		t.Error = fmt.Errorf("Unexpected token %s at %d", tok.Type, tok.Pos)
 		return &BraaiTagNode{}
 	}
 }
@@ -187,7 +187,9 @@ func (t *Tree) singleArgument() Node {
 }
 
 func (t *Tree) next() item {
-	if t.peekCount == 0 {
+  if t.peekCount > 1 {
+    panic("Parser lookahead overflow")
+  } else if t.peekCount == 0 {
 		t.lastCol = t.lexer.column()
 		t.token = t.lexer.NextToken()
 	} else {
