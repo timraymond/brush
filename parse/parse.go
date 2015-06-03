@@ -83,7 +83,10 @@ func (t *Tree) blockOrRegular() Node {
 	} else if tok.Type == itemBlock {
 		t.backup()
 		return t.blockTag()
-	} else {
+	} else if tok.Type == itemError {
+    t.Error = fmt.Errorf("Lexical Error while parsing BLOCK_OR_REGULAR: %s", tok.Value)
+		return &BraaiTagNode{}
+  } else {
 		t.Error = fmt.Errorf("Unexpected token %s at %d", tok.Type, tok.Pos)
 		return &BraaiTagNode{}
 	}

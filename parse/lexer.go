@@ -9,13 +9,14 @@ import (
 )
 
 type lexer struct {
-	input    string    // the string being scanned
-	items    chan item // holds scanned items
-	blockIds []string  // identifiers which should be treated as block elments
-	state    stateFn   // current state of the lexer
-	start    int       // start position in the input of the next token
-	pos      int       // current position in the input, will mark the end of the next token
-	width    int       // width of the last read rune
+	input               string    // the string being scanned
+	items               chan item // holds scanned items
+	blockIds            []string  // identifiers which should be treated as block elments
+	state               stateFn   // current state of the lexer
+	start               int       // start position in the input of the next token
+	pos                 int       // current position in the input, will mark the end of the next token
+	width               int       // width of the last read rune
+	spaceAlreadyScanned bool
 }
 
 // Represents different types of lexed items.
@@ -28,8 +29,6 @@ const alphaNum = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
 const filename = "-._()/,&é0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
 
 const eof = -1
-
-var spaceAlreadyScanned bool
 
 //go:generate stringer -type=itemType
 const (
@@ -74,13 +73,13 @@ func NewLexer(document string, blockIds []string) *lexer {
 
 // emits a new item into the lexer's items channel
 func (self *lexer) emit(t itemType) {
-  select {
-  case self.items <- item{t, self.start, self.input[self.start:self.pos]}:
-    self.start = self.pos
-    return
-  default:
-    log.Panicf("Token stream full attempting to emit token %s at %d with value %s", t, self.pos, self.input[self.start:self.pos])
-  }
+	select {
+	case self.items <- item{t, self.start, self.input[self.start:self.pos]}:
+		self.start = self.pos
+		return
+	default:
+		log.Panicf("Token stream full attempting to emit token %s at %d with value %s", t, self.pos, self.input[self.start:self.pos])
+	}
 }
 
 func (self *lexer) backup() {
@@ -126,7 +125,15 @@ func (l *lexer) column() int {
 	if lastNewline == -1 {
 		lastNewline = 0
 	}
-	return utf8.RuneCountInString(l.input[lastNewline:l.start])
+
+	var ending int
+	if l.start > len(l.input) {
+		ending = len(l.input)
+	} else {
+		ending = l.start
+	}
+
+	return utf8.RuneCountInString(l.input[lastNewline:ending])
 }
 
 func (l *lexer) ignore() {
@@ -181,7 +188,7 @@ func lexRightMeta(l *lexer) stateFn {
 func lexSpace(l *lexer) stateFn {
 	for isSpace(l.next()) {
 	}
-  l.backup()
+	l.backup()
 	l.ignore()
 	return lexInsideAction
 }
@@ -189,33 +196,34 @@ func lexSpace(l *lexer) stateFn {
 func lexInsideAction(l *lexer) stateFn {
 	switch r := l.next(); {
 	case unicode.IsLetter(r):
-    spaceAlreadyScanned = false
+		l.spaceAlreadyScanned = false
 		return lexIdentifier
 	case r == eof:
-    spaceAlreadyScanned = false
-    l.emit(itemRightMeta)
-    return nil
+		l.spaceAlreadyScanned = false
+		l.emit(itemRightMeta)
+		l.emit(itemEOF)
+		return nil
 	case isSpace(r):
-    if spaceAlreadyScanned == false {
-      spaceAlreadyScanned = true
-      return lexSpace
-    } else {
-      return l.errorf("Space already scanned - Lexer defect")
-    }
+		if l.spaceAlreadyScanned == false {
+			l.spaceAlreadyScanned = true
+			return lexSpace
+		} else {
+			return l.errorf("Space already scanned - Lexer defect")
+		}
 	case r == '}':
-    spaceAlreadyScanned = false
+		l.spaceAlreadyScanned = false
 		return lexRightMeta
 	case r == '.':
-    spaceAlreadyScanned = false
+		l.spaceAlreadyScanned = false
 		return lexDotCommand
 	case r == '(':
-    spaceAlreadyScanned = false
+		l.spaceAlreadyScanned = false
 		return lexParenthesizedArgument
 	case r == '\'' || r == '"':
-    spaceAlreadyScanned = false
+		l.spaceAlreadyScanned = false
 		return lexQuotedArgument
 	case r == '=':
-    spaceAlreadyScanned = false
+		l.spaceAlreadyScanned = false
 		l.emit(itemAssign)
 		if r = l.next(); r == '\'' || r == '"' {
 			return lexQuotedArgument
@@ -225,17 +233,17 @@ func lexInsideAction(l *lexer) stateFn {
 			return l.errorf("Malformed modifier")
 		}
 	case r == '[':
-    spaceAlreadyScanned = false
+		l.spaceAlreadyScanned = false
 		return lexBracketedArgument
 	case r == ',':
-    spaceAlreadyScanned = false
+		l.spaceAlreadyScanned = false
 		l.ignore()
 		return lexInsideAction
-  case r == '\n':
-    l.emit(itemRightMeta)
-    return lexText
+	case r == '\n':
+		l.emit(itemRightMeta)
+		return lexText
 	default:
-    spaceAlreadyScanned = false
+		l.spaceAlreadyScanned = false
 		return l.errorf("Unexpected character %#U", r)
 	}
 }
