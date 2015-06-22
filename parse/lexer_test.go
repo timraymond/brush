@@ -18,10 +18,10 @@ var lexTests = []lexTest{
 	{"markdown with newlines", "Markdown with \n\n Newlines...", []item{
 		{itemText, 0, "Markdown with \n\n Newlines..."},
 	}},
-	{"markdown with opening braai tag", "The {{", []item{
+	{"auto-closing tags that hit eof", "The {{", []item{
 		{itemText, 0, "The "},
 		{itemLeftMeta, 0, "{{"},
-		{itemError, 0, "Unexpected end of action"},
+		{itemRightMeta, 0, ""},
 	}},
 	{"markdown with {{product.name}} braai tag", "The {{product.name}}", []item{
 		{itemText, 0, "The "},
@@ -154,13 +154,13 @@ var lexTests = []lexTest{
 		{itemQuotedArgument, 0, "Bar"},
 		{itemError, 0, "Malformed end of Braai tag, should be }}"},
 	}},
-	{"ignore newlines in Braai tags", "Some plain text {{ photo_gallery 'Foo', \n\"Bar\"}}", []item{
+	{"auto-closes braai tags with newlines", "Some plain text {{ photo_gallery 'Foo'\n\nThis is unrelated text", []item{
 		{itemText, 0, "Some plain text "},
 		{itemLeftMeta, 0, "{{"},
 		{itemIdentifier, 0, "photo_gallery"},
 		{itemQuotedArgument, 0, "Foo"},
-		{itemQuotedArgument, 0, "Bar"},
-		{itemRightMeta, 0, "}}"},
+		{itemRightMeta, 0, "\n"},
+		{itemText, 0, "\nThis is unrelated text"},
 	}},
 	{"bracketed arguments", "Some plain text {{ article.attachments[\"The Thing\"] }}", []item{
 		{itemText, 0, "Some plain text "},
